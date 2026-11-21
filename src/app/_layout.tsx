@@ -56,6 +56,7 @@ function Gate() {
       <Stack.Screen name="customer/form" options={{ presentation: 'modal', title: t('addCustomer') }} />
       <Stack.Screen name="entry/new" options={{ presentation: 'modal', title: '' }} />
       <Stack.Screen name="settings" options={{ title: t('settings') }} />
+      <Stack.Screen name="products" options={{ title: t('products') }} />
       <Stack.Screen name="pin-setup" options={{ presentation: 'modal', title: t('security') }} />
     </Stack>
   );

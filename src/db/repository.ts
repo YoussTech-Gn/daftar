@@ -6,6 +6,7 @@ import type {
   Entry,
   EntryKind,
   PaymentMethod,
+  Product,
   Summary,
 } from '@/domain/types';
 
@@ -13,6 +14,7 @@ interface CustomerRow {
   id: number;
   name: string;
   phone: string | null;
+  note: string | null;
   created_at: number;
   balance: number | null;
   last_activity_at: number | null;
@@ -28,8 +30,15 @@ interface EntryRow {
   created_at: number;
 }
 
+interface ProductRow {
+  id: number;
+  name: string;
+  price: number;
+  use_count: number;
+}
+
 const BALANCE_SQL = `
-  SELECT c.id, c.name, c.phone, c.created_at,
+  SELECT c.id, c.name, c.phone, c.note, c.created_at,
     COALESCE(SUM(CASE WHEN e.kind = 'credit' THEN e.amount ELSE -e.amount END), 0) AS balance,
     MAX(e.created_at) AS last_activity_at
   FROM customers c
@@ -41,6 +50,7 @@ function toCustomer(row: CustomerRow): CustomerWithBalance {
     id: row.id,
     name: row.name,
     phone: row.phone,
+    note: row.note,
     createdAt: row.created_at,
     balance: row.balance ?? 0,
     lastActivityAt: row.last_activity_at,
@@ -59,14 +69,19 @@ function toEntry(row: EntryRow): Entry {
   };
 }
 
+function toProduct(row: ProductRow): Product {
+  return { id: row.id, name: row.name, price: row.price, useCount: row.use_count };
+}
+
 export async function listCustomers(db: SQLiteDatabase, search = ''): Promise<CustomerWithBalance[]> {
   const term = search.trim();
+  const order = 'GROUP BY c.id ORDER BY balance DESC, last_activity_at DESC, c.name';
   const rows = term
     ? await db.getAllAsync<CustomerRow>(
-        `${BALANCE_SQL} AND (c.name LIKE ? OR c.phone LIKE ?) GROUP BY c.id ORDER BY balance DESC, c.name`,
-        [`%${term}%`, `%${term}%`],
+        `${BALANCE_SQL} AND (c.name LIKE ? OR c.phone LIKE ? OR c.note LIKE ?) ${order}`,
+        [`%${term}%`, `%${term}%`, `%${term}%`],
       )
-    : await db.getAllAsync<CustomerRow>(`${BALANCE_SQL} GROUP BY c.id ORDER BY balance DESC, c.name`);
+    : await db.getAllAsync<CustomerRow>(`${BALANCE_SQL} ${order}`);
   return rows.map(toCustomer);
 }
 
@@ -80,22 +95,29 @@ export async function countCustomers(db: SQLiteDatabase): Promise<number> {
   return row?.n ?? 0;
 }
 
-export async function createCustomer(db: SQLiteDatabase, name: string, phone: string | null): Promise<number> {
-  const result = await db.runAsync('INSERT INTO customers (name, phone, created_at) VALUES (?, ?, ?)', [
-    name.trim(),
-    phone?.trim() || null,
+export interface CustomerInput {
+  name: string;
+  phone: string | null;
+  note: string | null;
+}
+
+export async function createCustomer(db: SQLiteDatabase, input: CustomerInput): Promise<number> {
+  const result = await db.runAsync('INSERT INTO customers (name, phone, note, created_at) VALUES (?, ?, ?, ?)', [
+    input.name.trim(),
+    input.phone?.trim() || null,
+    input.note?.trim() || null,
     Date.now(),
   ]);
   return result.lastInsertRowId;
 }
 
-export async function updateCustomer(
-  db: SQLiteDatabase,
-  id: number,
-  name: string,
-  phone: string | null,
-): Promise<void> {
-  await db.runAsync('UPDATE customers SET name = ?, phone = ? WHERE id = ?', [name.trim(), phone?.trim() || null, id]);
+export async function updateCustomer(db: SQLiteDatabase, id: number, input: CustomerInput): Promise<void> {
+  await db.runAsync('UPDATE customers SET name = ?, phone = ?, note = ? WHERE id = ?', [
+    input.name.trim(),
+    input.phone?.trim() || null,
+    input.note?.trim() || null,
+    id,
+  ]);
 }
 
 export async function deleteCustomer(db: SQLiteDatabase, id: number): Promise<void> {
@@ -127,6 +149,41 @@ export async function addEntry(
 export async function deleteEntry(db: SQLiteDatabase, id: number): Promise<void> {
   await db.runAsync('DELETE FROM entries WHERE id = ?', [id]);
 }
+
+// ── Products ────────────────────────────────────────────────────────────────
+
+/** Most-used products first, then alphabetical. */
+export async function listProducts(db: SQLiteDatabase): Promise<Product[]> {
+  const rows = await db.getAllAsync<ProductRow>(
+    'SELECT id, name, price, use_count FROM products ORDER BY use_count DESC, name COLLATE NOCASE',
+  );
+  return rows.map(toProduct);
+}
+
+export async function createProduct(db: SQLiteDatabase, name: string, price: number): Promise<number> {
+  const result = await db.runAsync('INSERT INTO products (name, price, created_at) VALUES (?, ?, ?)', [
+    name.trim(),
+    price,
+    Date.now(),
+  ]);
+  return result.lastInsertRowId;
+}
+
+export async function updateProduct(db: SQLiteDatabase, id: number, name: string, price: number): Promise<void> {
+  await db.runAsync('UPDATE products SET name = ?, price = ? WHERE id = ?', [name.trim(), price, id]);
+}
+
+export async function deleteProduct(db: SQLiteDatabase, id: number): Promise<void> {
+  await db.runAsync('DELETE FROM products WHERE id = ?', [id]);
+}
+
+export async function bumpProductUse(db: SQLiteDatabase, uses: { id: number; qty: number }[]): Promise<void> {
+  for (const u of uses) {
+    await db.runAsync('UPDATE products SET use_count = use_count + ? WHERE id = ?', [u.qty, u.id]);
+  }
+}
+
+// ── Summary & settings ──────────────────────────────────────────────────────
 
 function startOfToday(): number {
   const d = new Date();
@@ -164,18 +221,22 @@ export async function setSetting(db: SQLiteDatabase, key: string, value: string)
   ]);
 }
 
+// ── Backup ──────────────────────────────────────────────────────────────────
+
 export interface BackupData {
   app: 'daftar';
   version: 1;
   exportedAt: string;
   customers: Customer[];
   entries: Entry[];
+  /** Added in schema v2; optional so older backups still restore. */
+  products?: Product[];
   settings: Record<string, string>;
 }
 
 export async function exportAll(db: SQLiteDatabase): Promise<BackupData> {
   const customers = await db.getAllAsync<CustomerRow>(
-    'SELECT id, name, phone, created_at, NULL AS balance, NULL AS last_activity_at FROM customers WHERE archived = 0',
+    'SELECT id, name, phone, note, created_at, NULL AS balance, NULL AS last_activity_at FROM customers WHERE archived = 0',
   );
   const entries = await db.getAllAsync<EntryRow>('SELECT * FROM entries ORDER BY created_at');
   const settingsRows = await db.getAllAsync<{ key: string; value: string }>('SELECT key, value FROM settings');
@@ -183,8 +244,15 @@ export async function exportAll(db: SQLiteDatabase): Promise<BackupData> {
     app: 'daftar',
     version: 1,
     exportedAt: new Date().toISOString(),
-    customers: customers.map(({ id, name, phone, created_at }) => ({ id, name, phone, createdAt: created_at })),
+    customers: customers.map(({ id, name, phone, note, created_at }) => ({
+      id,
+      name,
+      phone,
+      note,
+      createdAt: created_at,
+    })),
     entries: entries.map(toEntry),
+    products: await listProducts(db),
     settings: Object.fromEntries(settingsRows.map((r) => [r.key, r.value])),
   };
 }
@@ -196,10 +264,11 @@ export async function importAll(db: SQLiteDatabase, data: BackupData): Promise<v
     await db.runAsync('DELETE FROM entries');
     await db.runAsync('DELETE FROM customers');
     for (const c of data.customers) {
-      await db.runAsync('INSERT INTO customers (id, name, phone, created_at) VALUES (?, ?, ?, ?)', [
+      await db.runAsync('INSERT INTO customers (id, name, phone, note, created_at) VALUES (?, ?, ?, ?, ?)', [
         c.id,
         c.name,
         c.phone,
+        c.note ?? null,
         c.createdAt,
       ]);
     }
@@ -208,6 +277,18 @@ export async function importAll(db: SQLiteDatabase, data: BackupData): Promise<v
         'INSERT INTO entries (id, customer_id, kind, amount, method, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
         [e.id, e.customerId, e.kind, e.amount, e.method, e.note, e.createdAt],
       );
+    }
+    if (data.products) {
+      await db.runAsync('DELETE FROM products');
+      for (const p of data.products) {
+        await db.runAsync('INSERT INTO products (id, name, price, use_count, created_at) VALUES (?, ?, ?, ?, ?)', [
+          p.id,
+          p.name,
+          p.price,
+          p.useCount,
+          Date.now(),
+        ]);
+      }
     }
     for (const [key, value] of Object.entries(data.settings)) {
       await db.runAsync(

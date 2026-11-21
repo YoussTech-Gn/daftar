@@ -11,12 +11,23 @@
 - Light / dark theme, RTL-aware layout
 - Unit tests for money parsing/formatting, phone normalization, WhatsApp link, CSV
 
-## Night 2 — trust & daily use
-- [ ] Test on a real phone in Expo Go (Android + iOS), fix layout issues
-- [ ] Full RTL with `I18nManager` (navigation header/back arrow direction) — needs app reload
-- [ ] Edit an entry (not only delete); due date on credit
+## ✅ Night 2 (2026-11-21) — fast entry & knowing the customer (decision 0008)
+- [x] Tested on a real Android phone in Expo Go; fixed RTL chips, dark-mode contrast, reversed amounts in Arabic
+- [x] Calculator keypad for amounts (`1500 + 800`, `000` key) — no system keyboard
+- [x] Product catalog with prices; tap = +1, long-press = −1; note written automatically; most-used first
+- [x] "+ Credit" button on every customer row
+- [x] Import customer from phone contacts; description field; last activity on rows; filters All / Owe me / Settled
+- [x] WhatsApp receipt prompt after each entry, with the new balance
+- [x] Back twice to exit on home
+
+## Night 3 — collection & trust
+- [ ] Due date on credit + local reminder notification for the shopkeeper; "Overdue" filter
+- [ ] Customer statement as PDF (expo-print) shared over WhatsApp
+- [ ] Edit an entry (not only delete)
 - [ ] "Daily close" screen: totals per payment channel (cash / Wave / OM / MTN)
-- [ ] Share a customer statement as an image / PDF over WhatsApp
+- [ ] Aging dashboard: 0–30 / 31–60 / 60+ days; top debtors
+- [ ] Customer photo; credit limit per customer
+- [ ] Full RTL with `I18nManager` (navigation header/back arrow direction) — needs app reload
 
 ## Night 3 — growth loop
 - [ ] Reminder templates editable per shop; local notification to remind the shopkeeper

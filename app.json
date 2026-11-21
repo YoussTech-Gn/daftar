@@ -36,7 +36,13 @@
       "expo-sqlite",
       "expo-sharing",
       "expo-secure-store",
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Daftar uses your contacts only to add a customer you pick."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

@@ -93,7 +93,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           ? fillTemplate(text, Object.fromEntries(Object.entries(values).map(([k, v]) => [k, String(v)])))
           : text;
       },
-      money: (minor) => formatAmount(minor, settings.currency),
+      // Left-to-right isolate (U+2066 … U+2069) so "535 000 GNF" is not reversed inside Arabic text.
+      money: (minor) => `⁦${formatAmount(minor, settings.currency)}⁩`,
       updateSettings,
     };
   }, [ready, settings, updateSettings]);

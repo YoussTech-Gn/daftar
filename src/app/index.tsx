@@ -1,22 +1,46 @@
 import { Link, router, Stack, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { BackHandler, FlatList, Platform, Pressable, StyleSheet, TextInput, ToastAndroid, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Avatar, Card, Row, Txt } from '@/components/ui';
+import { Avatar, Button, Card, Chip, ChipRow, Row, Txt } from '@/components/ui';
 import { getSummary, listCustomers } from '@/db/repository';
+import { daysAgo } from '@/domain/time';
 import type { CustomerWithBalance, Summary } from '@/domain/types';
 import { useApp } from '@/state/app-context';
 import { usePalette } from '@/theme';
+
+type Filter = 'all' | 'owes' | 'settled';
+
+/** Android: first Back shows a hint, a second Back within 2 s exits. */
+function useDoubleBackToExit(message: string) {
+  const lastPress = useRef(0);
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS !== 'android') return;
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        const now = Date.now();
+        if (now - lastPress.current < 2000) return false;
+        lastPress.current = now;
+        ToastAndroid.show(message, ToastAndroid.SHORT);
+        return true;
+      });
+      return () => sub.remove();
+    }, [message]),
+  );
+}
 
 export default function HomeScreen() {
   const db = useSQLiteContext();
   const { t, money, isRTL } = useApp();
   const palette = usePalette();
   const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<Filter>('all');
   const [customers, setCustomers] = useState<CustomerWithBalance[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
+
+  useDoubleBackToExit(t('pressBackAgain'));
 
   const load = useCallback(async () => {
     const [list, sum] = await Promise.all([listCustomers(db, search), getSummary(db)]);
@@ -30,13 +54,17 @@ export default function HomeScreen() {
     }, [load]),
   );
 
+  const visible = customers.filter((c) =>
+    filter === 'owes' ? c.balance > 0 : filter === 'settled' ? c.balance <= 0 : true,
+  );
+
   return (
     <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
       <Stack.Screen
         options={{
           headerRight: () => (
             <Link href="/settings" asChild>
-              <Pressable accessibilityRole="button" hitSlop={12}>
+              <Pressable accessibilityRole="button" accessibilityLabel={t('settings')} hitSlop={12}>
                 <Txt size={22}>⚙️</Txt>
               </Pressable>
             </Link>
@@ -44,7 +72,7 @@ export default function HomeScreen() {
         }}
       />
       <FlatList
-        data={customers}
+        data={visible}
         keyExtractor={(c) => String(c.id)}
         contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 120 }}
         keyboardShouldPersistTaps="handled"
@@ -79,6 +107,20 @@ export default function HomeScreen() {
                 </Txt>
               </Card>
             </Row>
+            <Row gap={10}>
+              <Button
+                label={`📦 ${t('products')}`}
+                variant="secondary"
+                onPress={() => router.push('/products')}
+                style={styles.smallButton}
+              />
+              <Button
+                label={`⚙️ ${t('settings')}`}
+                variant="secondary"
+                onPress={() => router.push('/settings')}
+                style={styles.smallButton}
+              />
+            </Row>
             <TextInput
               value={search}
               onChangeText={setSearch}
@@ -94,6 +136,11 @@ export default function HomeScreen() {
                 },
               ]}
             />
+            <ChipRow>
+              <Chip label={t('filterAll')} selected={filter === 'all'} onPress={() => setFilter('all')} />
+              <Chip label={t('filterOwes')} selected={filter === 'owes'} onPress={() => setFilter('owes')} />
+              <Chip label={t('filterSettled')} selected={filter === 'settled'} onPress={() => setFilter('settled')} />
+            </ChipRow>
           </View>
         }
         ListEmptyComponent={
@@ -131,31 +178,56 @@ function CustomerRow({ customer }: { customer: CustomerWithBalance }) {
   const owes = customer.balance > 0;
   const advance = customer.balance < 0;
   const color = owes ? palette.credit : advance ? palette.payment : palette.muted;
+  const days = customer.lastActivityAt === null ? null : daysAgo(customer.lastActivityAt);
+  const activity =
+    days === null
+      ? t('noActivity')
+      : days === 0
+        ? t('lastToday')
+        : days === 1
+          ? t('lastYesterday')
+          : t('lastDaysAgo', { n: days });
+  const details = [customer.note, customer.phone].filter(Boolean).join(' · ');
+
   return (
     <Pressable
       accessibilityRole="button"
       onPress={() => router.push({ pathname: '/customer/[id]', params: { id: String(customer.id) } })}>
       {({ pressed }) => (
-        <Card style={{ opacity: pressed ? 0.85 : 1, paddingVertical: 12 }}>
+        <Card style={{ opacity: pressed ? 0.85 : 1, paddingVertical: 12, gap: 10 }}>
           <Row gap={12}>
             <Avatar name={customer.name} />
             <View style={{ flex: 1, gap: 2 }}>
               <Txt weight="700" numberOfLines={1}>
                 {customer.name}
               </Txt>
-              {customer.phone ? (
+              {details ? (
                 <Txt size={13} muted numberOfLines={1}>
-                  {customer.phone}
+                  {details}
                 </Txt>
               ) : null}
+              <Txt size={12} muted numberOfLines={1}>
+                {activity}
+              </Txt>
             </View>
-            <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end' }}>
+            <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end', gap: 6 }}>
               <Txt weight="800" style={{ color }}>
                 {money(Math.abs(customer.balance))}
               </Txt>
-              <Txt size={12} style={{ color }}>
-                {owes ? t('owes') : advance ? t('advance') : t('settled')}
-              </Txt>
+              <Pressable
+                accessibilityRole="button"
+                hitSlop={8}
+                onPress={() =>
+                  router.push({ pathname: '/entry/new', params: { customerId: String(customer.id), kind: 'credit' } })
+                }
+                style={({ pressed }) => [
+                  styles.quick,
+                  { backgroundColor: palette.creditSoft, opacity: pressed ? 0.7 : 1 },
+                ]}>
+                <Txt size={13} weight="700" style={{ color: palette.credit }}>
+                  {t('quickCredit')}
+                </Txt>
+              </Pressable>
             </View>
           </Row>
         </Card>
@@ -166,7 +238,9 @@ function CustomerRow({ customer }: { customer: CustomerWithBalance }) {
 
 const styles = StyleSheet.create({
   stat: { flex: 1, gap: 4, padding: 12 },
+  smallButton: { flex: 1, minHeight: 44 },
   search: { minHeight: 46, borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, fontSize: 16 },
+  quick: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
   fab: {
     position: 'absolute',
     bottom: 32,

@@ -29,6 +29,17 @@ const MIGRATIONS: string[] = [
     value TEXT NOT NULL
   );
   `,
+  // v2 — customer description + product catalog (decision 0008)
+  `
+  ALTER TABLE customers ADD COLUMN note TEXT;
+  CREATE TABLE IF NOT EXISTS products (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    price INTEGER NOT NULL CHECK (price > 0),
+    use_count INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL
+  );
+  `,
 ];
 
 export async function migrate(db: SQLiteDatabase): Promise<void> {

@@ -8,7 +8,17 @@ export interface Customer {
   id: number;
   name: string;
   phone: string | null;
+  /** Free description to recognise the customer, e.g. "tailor, street 10". */
+  note?: string | null;
   createdAt: number;
+}
+
+export interface Product {
+  id: number;
+  name: string;
+  /** Price in minor units. */
+  price: number;
+  useCount: number;
 }
 
 export interface CustomerWithBalance extends Customer {

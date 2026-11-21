@@ -140,13 +140,25 @@ export function Field({ label, style, ...props }: TextInputProps & { label: stri
   );
 }
 
-export function Chip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
+export function Chip({
+  label,
+  selected,
+  onPress,
+  onLongPress,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+  onLongPress?: () => void;
+}) {
   const palette = usePalette();
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={350}
       style={[
         styles.chip,
         {

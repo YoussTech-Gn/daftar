@@ -116,6 +116,11 @@ export default function CustomerScreen() {
               <Txt weight="600" style={{ color: balanceColor, textAlign: 'center' }}>
                 {owes ? t('owes') : customer.balance < 0 ? t('advance') : t('settled')}
               </Txt>
+              {customer.note || customer.phone ? (
+                <Txt size={13} muted style={{ textAlign: 'center' }}>
+                  {[customer.note, customer.phone].filter(Boolean).join(' · ')}
+                </Txt>
+              ) : null}
             </Card>
             <Row gap={10}>
               <Button label={`↑ ${t('gaveCredit')}`} variant="credit" onPress={() => openEntry('credit')} style={{ flex: 1 }} />
