@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ICON, Undo2 } from '@/components/icons';
 import { Row, Txt } from '@/components/ui';
+import { haptic } from '@/lib/haptics';
 import { useApp } from '@/state/use-app';
 import { usePalette } from '@/theme';
 
@@ -36,6 +37,7 @@ export function UndoBar({
           accessibilityRole="button"
           hitSlop={10}
           onPress={() => {
+            haptic.tap();
             onUndo();
             onHide();
           }}>

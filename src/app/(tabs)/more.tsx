@@ -14,6 +14,7 @@ import {
   History,
   LockKeyhole,
   LockKeyholeOpen,
+  Package,
   Trash2,
 } from '@/components/icons';
 import { Button, Card, Chip, ChipRow, Txt } from '@/components/ui';
@@ -24,7 +25,8 @@ import { importAll, pickBackup, shareBackup, shareCsv } from '@/lib/export';
 import { hasPin, removePin } from '@/security/pin';
 import { useApp } from '@/state/use-app';
 
-export default function SettingsScreen() {
+/** "More" tab: products, shop & language, security, data, activity, trash. */
+export default function MoreScreen() {
   const db = useSQLiteContext();
   const { t, settings, updateSettings } = useApp();
   const [pinOn, setPinOn] = useState(false);
@@ -77,6 +79,7 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
+      <Button label={t('products')} icon={Package} variant="secondary" onPress={() => router.push('/products')} />
       <Card style={{ gap: 14 }}>
         <FormField control={control} name="shopName" label={t('shopName')} onEndEditing={() => saveShop()} />
         <FormField

@@ -30,6 +30,7 @@ import {
   type PaymentMethod,
   type Product,
 } from '@/domain/types';
+import { haptic } from '@/lib/haptics';
 import { offerReceipt } from '@/lib/receipt';
 import { useApp } from '@/state/use-app';
 import { usePalette } from '@/theme';
@@ -136,6 +137,7 @@ export default function NewEntryScreen() {
         total: lineTotal(i),
       })),
     });
+    haptic.success();
     await bumpProductUse(
       db,
       activeItems.map((p) => p.id),

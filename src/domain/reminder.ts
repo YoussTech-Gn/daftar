@@ -16,6 +16,17 @@ export function buildWhatsAppLink(phone: string, message: string, defaultCountry
   return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
 }
 
+/** Opens the phone's SMS app with a pre-filled message (the shopkeeper still presses send). */
+export function buildSmsLink(phone: string, message: string, defaultCountryCode = ''): string {
+  const number = normalizePhone(phone, defaultCountryCode);
+  return `sms:+${number}?body=${encodeURIComponent(message)}`;
+}
+
+/** Removes Unicode bidi isolates/marks (U+200E, U+200F, U+2066–U+2069) used for on-screen layout. */
+export function stripDirectionMarks(text: string): string {
+  return text.replace(/[‎‏⁦-⁩]/g, '');
+}
+
 export function fillTemplate(template: string, values: Record<string, string>): string {
   return template.replace(/\{(\w+)\}/g, (match, key: string) => values[key] ?? match);
 }

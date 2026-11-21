@@ -1,6 +1,6 @@
 import { Alert, Linking } from 'react-native';
 
-import { buildWhatsAppLink } from '@/domain/reminder';
+import { buildSmsLink, buildWhatsAppLink, stripDirectionMarks } from '@/domain/reminder';
 import type { EntryKind } from '@/domain/types';
 import type { TranslationKey } from '@/i18n/translations';
 
@@ -38,14 +38,21 @@ export function offerReceipt(input: ReceiptInput, onDone: () => void): void {
             balance: money(input.newBalance),
           });
   const phone = customer.phone;
-  Alert.alert(t('sendReceiptTitle'), t('sendReceiptBody', { name: customer.name }), [
-    { text: t('notNow'), style: 'cancel', onPress: onDone },
-    {
-      text: t('send'),
-      onPress: () => {
-        Linking.openURL(buildWhatsAppLink(phone, message, input.countryCode)).catch(() => undefined);
-        onDone();
-      },
-    },
-  ], { cancelable: true, onDismiss: onDone });
+  // Plain text for messages: invisible direction marks would make an SMS use the costly Unicode encoding.
+  const text = stripDirectionMarks(message);
+  const open = (url: string) => {
+    Linking.openURL(url).catch(() => undefined);
+    onDone();
+  };
+  Alert.alert(
+    t('sendReceiptTitle'),
+    t('sendReceiptBody', { name: customer.name }),
+    [
+      { text: t('notNow'), style: 'cancel', onPress: onDone },
+      // Many customers have basic phones without WhatsApp (analysis 0002).
+      { text: t('sendSms'), onPress: () => open(buildSmsLink(phone, text, input.countryCode)) },
+      { text: t('sendWhatsApp'), onPress: () => open(buildWhatsAppLink(phone, text, input.countryCode)) },
+    ],
+    { cancelable: true, onDismiss: onDone },
+  );
 }

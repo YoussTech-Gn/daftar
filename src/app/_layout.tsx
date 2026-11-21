@@ -13,7 +13,7 @@ import { AppProvider, useApp } from '@/state/use-app';
 import { usePalette } from '@/theme';
 
 /** Opening any screen directly (deep link, notification) keeps Home underneath, so Back never exits. */
-export const unstable_settings = { initialRouteName: 'index' };
+export const unstable_settings = { initialRouteName: '(tabs)' };
 
 /** Migrate, then permanently remove customers that stayed in the trash over 30 days (decision 0013). */
 async function initDatabase(db: SQLiteDatabase): Promise<void> {
@@ -61,11 +61,11 @@ function Gate() {
         headerShadowVisible: false,
         contentStyle: { backgroundColor: palette.background },
       }}>
-      <Stack.Screen name="index" options={{ title: settings.shopName || t('appName') }} />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="customer/[id]" options={{ title: '' }} />
       <Stack.Screen name="customer/form" options={{ presentation: 'modal', title: t('addCustomer') }} />
       <Stack.Screen name="entry/new" options={{ presentation: 'modal', title: '' }} />
-      <Stack.Screen name="settings" options={{ title: t('settings') }} />
+      <Stack.Screen name="pick-customer" options={{ presentation: 'modal', title: t('pickCustomer') }} />
       <Stack.Screen name="products" options={{ title: t('products') }} />
       <Stack.Screen name="trash" options={{ title: t('trash') }} />
       <Stack.Screen name="activity" options={{ title: t('activity') }} />

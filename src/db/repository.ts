@@ -392,6 +392,88 @@ export async function bumpProductUse(db: SQLiteDatabase, productIds: number[]): 
   }
 }
 
+// ── Home & reports (analysis 0002) ──────────────────────────────────────────
+
+export interface RecentEntry extends Entry {
+  customerName: string;
+}
+
+/** Latest entries across all active customers, newest first (cancelled ones included, marked). */
+export async function listRecentEntries(db: SQLiteDatabase, limit = 20): Promise<RecentEntry[]> {
+  const rows = await db.getAllAsync<EntryRow & { customer_name: string }>(
+    `SELECT e.*, c.name AS customer_name FROM entries e JOIN customers c ON c.id = e.customer_id
+     WHERE c.deleted_at IS NULL ORDER BY e.created_at DESC, e.id DESC LIMIT ?`,
+    [limit],
+  );
+  return rows.map((r) => ({ ...toEntry(r), customerName: r.customer_name }));
+}
+
+export interface PeriodReport {
+  creditGiven: number;
+  collected: number;
+  forgiven: number;
+  /** All-time totals, for the collected-vs-outstanding ring. */
+  totalCollected: number;
+  outstanding: number;
+}
+
+/** Totals between `from` (inclusive) and `to` (exclusive), ignoring cancelled entries and trashed customers. */
+export async function getPeriodReport(db: SQLiteDatabase, from: number, to: number): Promise<PeriodReport> {
+  const period = await db.getFirstAsync<{ credit: number | null; paid: number | null; forgiven: number | null }>(
+    `SELECT SUM(CASE WHEN e.kind = 'credit' THEN e.amount END) AS credit,
+            SUM(CASE WHEN e.kind = 'payment' THEN e.amount END) AS paid,
+            SUM(CASE WHEN e.kind = 'forgiven' THEN e.amount END) AS forgiven
+     FROM entries e JOIN customers c ON c.id = e.customer_id
+     WHERE e.cancelled_at IS NULL AND c.deleted_at IS NULL AND e.created_at >= ? AND e.created_at < ?`,
+    [from, to],
+  );
+  const allTime = await db.getFirstAsync<{ paid: number | null }>(
+    `SELECT SUM(e.amount) AS paid FROM entries e JOIN customers c ON c.id = e.customer_id
+     WHERE e.kind = 'payment' AND e.cancelled_at IS NULL AND c.deleted_at IS NULL`,
+  );
+  const summary = await getSummary(db);
+  return {
+    creditGiven: period?.credit ?? 0,
+    collected: period?.paid ?? 0,
+    forgiven: period?.forgiven ?? 0,
+    totalCollected: allTime?.paid ?? 0,
+    outstanding: summary.totalOwed,
+  };
+}
+
+export interface DebtAge {
+  customerId: number;
+  name: string;
+  balance: number;
+  /** Last payment (or forgiveness) time, or the first credit if he never paid. */
+  sinceAt: number;
+}
+
+/** Customers who owe money, with the date the clock started (for 30 / 60 / 90-day buckets). */
+export async function listDebtAges(db: SQLiteDatabase): Promise<DebtAge[]> {
+  const rows = await db.getAllAsync<{
+    id: number;
+    name: string;
+    balance: number;
+    last_paid: number | null;
+    first_credit: number | null;
+  }>(
+    `SELECT c.id, c.name,
+       SUM(CASE WHEN e.kind = 'credit' THEN e.amount ELSE -e.amount END) AS balance,
+       MAX(CASE WHEN e.kind IN ('payment', 'forgiven') THEN e.created_at END) AS last_paid,
+       MIN(CASE WHEN e.kind = 'credit' THEN e.created_at END) AS first_credit
+     FROM customers c JOIN entries e ON e.customer_id = c.id AND e.cancelled_at IS NULL
+     WHERE c.archived = 0 AND c.deleted_at IS NULL
+     GROUP BY c.id HAVING balance > 0 ORDER BY balance DESC`,
+  );
+  return rows.map((r) => ({
+    customerId: r.id,
+    name: r.name,
+    balance: r.balance,
+    sinceAt: r.last_paid ?? r.first_credit ?? Date.now(),
+  }));
+}
+
 // ── Summary & settings ──────────────────────────────────────────────────────
 
 function startOfToday(): number {

@@ -34,6 +34,7 @@ import {
 import { itemLabel, itemsToNote } from '@/domain/calc';
 import { buildWhatsAppLink } from '@/domain/reminder';
 import type { CustomerWithBalance, Entry } from '@/domain/types';
+import { haptic } from '@/lib/haptics';
 import { offerReceipt } from '@/lib/receipt';
 import { useApp } from '@/state/use-app';
 import { usePalette, type Palette } from '@/theme';
@@ -73,6 +74,11 @@ export default function CustomerScreen() {
 
   const owes = customer.balance > 0;
   const inTrash = customer.deletedAt != null;
+  // Entries are newest first; cancelled ones don't count.
+  const lastCredit = entries.find((e) => e.kind === 'credit' && !e.cancelledAt);
+  const lastPayment = entries.find((e) => e.kind !== 'credit' && !e.cancelledAt);
+  const shortDate = (ts: number) =>
+    new Date(ts).toLocaleDateString(settings.language, { day: 'numeric', month: 'short' });
   const balanceColor = owes ? palette.credit : customer.balance < 0 ? palette.payment : palette.muted;
 
   function entryTitle(e: Entry): string {
@@ -129,6 +135,7 @@ export default function CustomerScreen() {
             method: 'other',
             note: null,
           });
+          haptic.success();
           await load();
           offerReceipt(
             {
@@ -185,6 +192,7 @@ export default function CustomerScreen() {
         style: 'destructive',
         onPress: async () => {
           await cancelEntry(db, entry);
+          haptic.warning();
           await load();
           setUndo({
             message: t('entryCancelled'),
@@ -254,6 +262,16 @@ export default function CustomerScreen() {
               {customer.note || customer.phone ? (
                 <Txt size={13} muted style={{ textAlign: 'center' }}>
                   {[customer.note, customer.phone].filter(Boolean).join(' · ')}
+                </Txt>
+              ) : null}
+              {lastCredit || lastPayment ? (
+                <Txt size={12} muted style={{ textAlign: 'center' }}>
+                  {[
+                    lastCredit ? t('lastCredit', { date: shortDate(lastCredit.createdAt) }) : null,
+                    lastPayment ? t('lastPayment', { date: shortDate(lastPayment.createdAt) }) : t('neverPaid'),
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
                 </Txt>
               ) : null}
             </Card>
