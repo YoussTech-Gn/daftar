@@ -9,7 +9,8 @@ import { DaftarButton, DaftarInput, DaftarText } from '@/components/ui';
 import { haptic } from '@/lib/haptics';
 import { Txt } from '@/components/v4/primitives';
 import { canUseBiometrics, unlockWithBiometrics } from '@/security/biometric';
-import { hasRecoveryCode, verifyPin, verifyRecoveryCode } from '@/security/pin';
+import { formatWait } from '@/security/attempts';
+import { checkPin, checkRecoveryCode, hasRecoveryCode, lockRemainingMs, resetAttempts } from '@/security/pin';
 import { useApp } from '@/state/use-app';
 import { useTheme } from '@/theme';
 
@@ -28,15 +29,41 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
   const [code, setCode] = useState('');
   const [checking, setChecking] = useState(false);
   const [biometrics, setBiometrics] = useState(false);
+  // Brute-force protection (decision 0019): while locked the keypad is replaced by a countdown.
+  const [lockedUntil, setLockedUntil] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
+  const waitMs = Math.max(0, lockedUntil - now);
 
   useEffect(() => {
     canUseBiometrics().then(setBiometrics);
+    lockRemainingMs('pin').then((ms) => {
+      if (ms > 0) {
+        setNow(Date.now());
+        setLockedUntil(Date.now() + ms);
+      }
+    });
   }, []);
+
+  useEffect(() => {
+    if (lockedUntil === 0) return;
+    const timer = setInterval(() => {
+      const current = Date.now();
+      setNow(current);
+      if (current >= lockedUntil) {
+        clearInterval(timer);
+        setLockedUntil(0);
+        setError(null);
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [lockedUntil]);
 
   async function biometricUnlock() {
     haptic.selection();
     if (await unlockWithBiometrics(t('biometricPrompt'), t('cancel'))) {
       haptic.success();
+      // The owner's own finger: the wrong-PIN counter starts over.
+      await resetAttempts('pin');
       onUnlock();
     }
   }
@@ -50,9 +77,9 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
   async function submitCode() {
     if (checking) return;
     setChecking(true);
-    const ok = await verifyRecoveryCode(code);
+    const result = await checkRecoveryCode(code);
     setChecking(false);
-    if (ok) {
+    if (result.ok) {
       haptic.success();
       setCode('');
       setError(null);
@@ -60,7 +87,7 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
       return;
     }
     haptic.warning();
-    setError(t('recoveryWrong'));
+    setError(result.locked ? t('tooManyTries', { time: formatWait(result.lockedMs) }) : t('recoveryWrong'));
   }
 
   if (mode === 'newPin') {
@@ -102,20 +129,46 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
         {header}
-        <PinPad
-          title={t('enterPin')}
-          error={error}
-          errorNonce={errorNonce}
-          onComplete={async (pin) => {
-            if (await verifyPin(pin)) {
-              haptic.success();
-              onUnlock();
-              return true;
-            }
-            setError(t('wrongPin'));
-            setErrorNonce((n) => n + 1);
-          }}
-        />
+        {waitMs > 0 ? (
+          <View className="w-full max-w-[420px] items-center gap-2 rounded-card border border-line bg-surface px-5 py-6">
+            <Txt weight="700" className="text-center text-base text-danger">
+              {t('tooManyTriesTitle')}
+            </Txt>
+            <Txt weight="800" numeric className="text-4xl">
+              {formatWait(waitMs)}
+            </Txt>
+            <Txt className="text-center text-sm text-ink-2">{t('tooManyTriesBody')}</Txt>
+          </View>
+        ) : (
+          <PinPad
+            title={t('enterPin')}
+            error={error}
+            errorNonce={errorNonce}
+            onComplete={async (pin) => {
+              const result = await checkPin(pin);
+              if (result.ok) {
+                haptic.success();
+                onUnlock();
+                return true;
+              }
+              setErrorNonce((n) => n + 1);
+              if (result.locked) {
+                haptic.warning();
+                setNow(Date.now());
+                setLockedUntil(Date.now() + result.lockedMs);
+                setError(null);
+                return;
+              }
+              setError(
+                result.triesBeforeLock === 0
+                  ? `${t('wrongPin')} ${t('lastTryBeforeLock')}`
+                  : result.triesBeforeLock <= 2
+                    ? `${t('wrongPin')} ${t('triesBeforeLock', { n: result.triesBeforeLock })}`
+                    : t('wrongPin'),
+              );
+            }}
+          />
+        )}
         {biometrics ? (
           <Pressable
             accessibilityRole="button"

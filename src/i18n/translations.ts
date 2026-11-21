@@ -7,6 +7,11 @@ export const LANGUAGES: { code: Language; label: string; rtl: boolean }[] = [
 ];
 
 const en = {
+  lastTryBeforeLock: 'One more mistake and entry pauses.',
+  tooManyTriesTitle: 'Too many wrong PINs',
+  tooManyTriesBody: 'To protect your ledger, wait before trying again. Each new mistake makes the wait longer.',
+  tooManyTries: 'Too many tries. Wait {time}.',
+  triesBeforeLock: '{n} tries left before a pause.',
   biometricPrompt: 'Unlock Daftar',
   tapToCopy: 'Tap to copy',
   codeCopied: 'Code copied. Write it on paper, then clear it from the clipboard.',
@@ -307,6 +312,11 @@ export type TranslationKey = keyof typeof en;
 type Dictionary = Record<TranslationKey, string>;
 
 const fr: Dictionary = {
+  lastTryBeforeLock: 'Encore une erreur et la saisie sera mise en pause.',
+  tooManyTriesTitle: 'Trop de codes incorrects',
+  tooManyTriesBody: 'Pour protéger votre cahier, attendez avant de réessayer. Chaque nouvelle erreur allonge l’attente.',
+  tooManyTries: 'Trop d’essais. Attendez {time}.',
+  triesBeforeLock: 'Encore {n} essais avant une pause.',
   biometricPrompt: 'Déverrouiller Daftar',
   tapToCopy: 'Toucher pour copier',
   codeCopied: 'Code copié. Notez-le sur papier, puis effacez-le du presse-papiers.',
@@ -592,6 +602,11 @@ const fr: Dictionary = {
 };
 
 const ar: Dictionary = {
+  lastTryBeforeLock: 'خطأ آخر وسيتوقف الإدخال مؤقتاً.',
+  tooManyTriesTitle: 'محاولات خاطئة كثيرة',
+  tooManyTriesBody: 'لحماية دفترك، انتظر قبل المحاولة مجدداً. كل خطأ جديد يطيل الانتظار.',
+  tooManyTries: 'محاولات كثيرة. انتظر {time}.',
+  triesBeforeLock: 'باقي {n} محاولات قبل الإيقاف المؤقت.',
   biometricPrompt: 'فتح دفتر',
   tapToCopy: 'المس للنسخ',
   codeCopied: 'تم نسخ الرمز. اكتبه على الورق ثم امسحه من الحافظة.',

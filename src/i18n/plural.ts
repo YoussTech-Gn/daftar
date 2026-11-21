@@ -36,12 +36,14 @@ export const PLURALS: Record<Language, Partial<Record<TranslationKey, PluralForm
     customersCount: { one: '1 customer' },
     daysLeft: { one: '1 day left' },
     lastDaysAgo: { one: 'Last: 1 day ago' },
+    triesBeforeLock: { one: '1 try left before a pause.' },
   },
   fr: {
     customersInDebt: { one: '{count} client vous doit' },
     customersCount: { one: '{n} client' },
     daysLeft: { one: 'encore {n} jour' },
     lastDaysAgo: { one: 'Dernier : il y a {n} jour' },
+    triesBeforeLock: { one: 'Encore 1 essai avant une pause.' },
   },
   ar: {
     customersInDebt: {
@@ -65,6 +67,10 @@ export const PLURALS: Record<Language, Partial<Record<TranslationKey, PluralForm
       few: 'باقي {n} أيام',
       many: 'باقي {n} يومًا',
       other: 'باقي {n} يوم',
+    },
+    triesBeforeLock: {
+      one: 'باقي محاولة واحدة قبل الإيقاف المؤقت.',
+      two: 'باقي محاولتان قبل الإيقاف المؤقت.',
     },
     lastDaysAgo: {
       one: 'آخر عملية: منذ يوم',
