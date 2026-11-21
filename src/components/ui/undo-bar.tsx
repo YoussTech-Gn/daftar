@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   undoButton: {
-    minHeight: 36,
+    minHeight: 48,
     justifyContent: 'center',
   },
   track: {

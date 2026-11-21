@@ -22,6 +22,8 @@ export {
   Delete,
   Ellipsis,
   Eraser,
+  Eye,
+  EyeOff,
   FileSpreadsheet,
   HandHeart,
   HardDriveDownload,

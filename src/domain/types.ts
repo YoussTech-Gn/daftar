@@ -64,7 +64,8 @@ export interface Product {
 }
 
 /** Cash loan (money only) or goods taken from the shop. */
-export type CreditType = 'cash' | 'goods';
+/** 'opening' = a debt carried over from the paper notebook; not counted as credit given that day. */
+export type CreditType = 'cash' | 'goods' | 'opening';
 
 /** One line of an entry. Name and price are copied at sale time so history never changes. */
 export interface EntryItem {

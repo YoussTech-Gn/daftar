@@ -54,6 +54,7 @@ export default function NewEntryScreen() {
   const { t, settings, money } = useApp();
   const { colors, shadows } = useTheme();
   const markSavedEntry = useSessionStore((s) => s.markSavedEntry);
+  const showToast = useSessionStore((s) => s.showToast);
 
   const params = useLocalSearchParams<{ customerId: string; kind: EntryKind; settle?: string }>();
   const settle = params.settle === '1';
@@ -136,30 +137,40 @@ export default function NewEntryScreen() {
     if (total <= 0 || typed === null || !customer || saving) return;
     setSaving(true);
     const fullNote = [itemsNote, note.trim()].filter(Boolean).join(' — ');
-    const entryId = await addEntry(db, {
-      customerId,
-      kind,
-      amount: total,
-      method: kind === 'payment' ? method : 'cash',
-      note: fullNote || null,
-      creditType: kind === 'credit' ? creditType : null,
-      settlesAll: kind === 'payment' && total === customer.balance,
-      items: activeItems.map((i) => ({
-        productId: i.id,
-        name: i.name,
-        unit: i.unit ?? 'piece',
-        qty: i.qty,
-        unitPrice: i.price,
-        total: lineTotal(i),
-      })),
-    });
+    let entryId: number;
+    try {
+      entryId = await addEntry(db, {
+        customerId,
+        kind,
+        amount: total,
+        method: kind === 'payment' ? method : 'cash',
+        note: fullNote || null,
+        creditType: kind === 'credit' ? creditType : null,
+        settlesAll: kind === 'payment' && total === customer.balance,
+        items: activeItems.map((i) => ({
+          productId: i.id,
+          name: i.name,
+          unit: i.unit ?? 'piece',
+          qty: i.qty,
+          unitPrice: i.price,
+          total: lineTotal(i),
+        })),
+      });
+    } catch {
+      // The transaction rolled back, nothing was written: keep the amount on screen so the shopkeeper can retry.
+      haptic.warning();
+      showToast(t('saveFailed'));
+      setSaving(false);
+      return;
+    }
     haptic.success();
     markSavedEntry({ id: entryId, kind, customerId });
+    // Product ordering is a convenience: never let it turn a saved entry into an error.
     await bumpProductUse(
       db,
       activeItems.map((p) => p.id),
-    );
-    const updated = await getCustomer(db, customerId);
+    ).catch(() => undefined);
+    const updated = await getCustomer(db, customerId).catch(() => null);
     const receipt = buildReceiptPayload({
       t,
       money,
@@ -268,7 +279,7 @@ export default function NewEntryScreen() {
           <DaftarText role="caption" tone="secondary" weight="600" align="center">
             {t('total')}
           </DaftarText>
-          <AmountDisplay amount={total} size="display" animate color={heroColor} align="center" />
+          <AmountDisplay amount={total} size="display" animate alwaysVisible color={heroColor} align="center" />
           <DaftarText role="caption" tone="secondary" numberOfLines={3} align="center" style={styles.breakdown}>
             {breakdown || (isGoods ? t('tapItemsHint') : kind === 'credit' ? t('cashHint') : '')}
           </DaftarText>
@@ -363,8 +374,11 @@ export default function NewEntryScreen() {
           </Pressable>
         )}
 
-        <CalculatorKeypad onKey={onKey} allowDecimal={decimals > 0} />
+      </ScrollView>
 
+      {/* Keypad and Save stay pinned at the bottom, whatever the length of the product list. */}
+      <View style={[styles.footer, { backgroundColor: colors.bg, borderTopColor: colors.border }]}>
+        <CalculatorKeypad onKey={onKey} allowDecimal={decimals > 0} />
         <DaftarButton
           label={t('save')}
           amountText={formattedTotal}
@@ -373,7 +387,7 @@ export default function NewEntryScreen() {
           loading={saving}
           disabled={total <= 0 || typed === null}
         />
-      </ScrollView>
+      </View>
 
       {qtyFor ? (
         <QuantityBottomSheet
@@ -409,7 +423,14 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
     gap: 14,
-    paddingBottom: 28,
+    paddingBottom: 16,
+  },
+  footer: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 8,
+    gap: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   segmentedTrack: {
     padding: 4,
@@ -437,11 +458,11 @@ const styles = StyleSheet.create({
     minHeight: 18,
   },
   editProductsBtn: {
-    minHeight: 32,
+    minHeight: 48,
     justifyContent: 'center',
   },
   addNoteBtn: {
-    minHeight: 36,
+    minHeight: 48,
     justifyContent: 'center',
     alignSelf: 'flex-start',
   },

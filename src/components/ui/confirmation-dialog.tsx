@@ -131,6 +131,7 @@ export function ConfirmationDialog({
               <AmountDisplay
                 amount={amount}
                 size="title"
+                alwaysVisible
                 color={tone === 'forgiven' ? colors.forgiven : colors.text}
                 align="center"
               />

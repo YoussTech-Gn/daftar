@@ -17,6 +17,9 @@ export interface ToastMessage {
 interface SessionState {
   lastSavedEntry: SavedEntryHighlight | null;
   toast: ToastMessage | null;
+  /** "Hide amounts" eye: masks balances while a customer looks at the screen. Resets on restart. */
+  amountsHidden: boolean;
+  toggleAmountsHidden: () => void;
   markSavedEntry: (entry: Omit<SavedEntryHighlight, 'at'>) => void;
   clearSavedEntry: () => void;
   showToast: (message: string) => void;
@@ -29,6 +32,8 @@ let toastSeq = 0;
 export const useSessionStore = create<SessionState>()((set) => ({
   lastSavedEntry: null,
   toast: null,
+  amountsHidden: false,
+  toggleAmountsHidden: () => set((st) => ({ amountsHidden: !st.amountsHidden })),
   markSavedEntry: (entry) => set({ lastSavedEntry: { ...entry, at: Date.now() } }),
   clearSavedEntry: () => set({ lastSavedEntry: null }),
   showToast: (message) => {

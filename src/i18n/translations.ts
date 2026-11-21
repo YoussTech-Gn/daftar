@@ -7,6 +7,13 @@ export const LANGUAGES: { code: Language; label: string; rtl: boolean }[] = [
 ];
 
 const en = {
+  openingBalance: 'Already owes (from the paper notebook)',
+  openingBalanceHint: 'Optional. Kept as an old debt, not counted in today’s credit.',
+  openingBalanceEntry: 'Old debt (paper notebook)',
+  amountInvalid: 'Enter a valid amount',
+  hideAmounts: 'Hide amounts',
+  showAmounts: 'Show amounts',
+  saveFailed: 'Not saved. Nothing was recorded — please try again.',
   appName: 'Daftar',
   tagline: 'Your shop credit notebook, in your pocket.',
   // onboarding
@@ -21,7 +28,6 @@ const en = {
   // home
   totalOwed: 'Total owed to you',
   customersInDebt: '{count} customers owe you',
-  customersInDebtOne: '1 customer owes you',
   today: 'Today',
   givenToday: 'Credit given',
   receivedToday: 'Payments received',
@@ -238,6 +244,13 @@ export type TranslationKey = keyof typeof en;
 type Dictionary = Record<TranslationKey, string>;
 
 const fr: Dictionary = {
+  openingBalance: 'Doit déjà (ancien cahier)',
+  openingBalanceHint: 'Facultatif. Enregistré comme ancienne dette, pas compté dans les crédits du jour.',
+  openingBalanceEntry: 'Ancienne dette (cahier)',
+  amountInvalid: 'Entrez un montant valide',
+  hideAmounts: 'Masquer les montants',
+  showAmounts: 'Afficher les montants',
+  saveFailed: 'Non enregistré. Rien n’a été inscrit — réessayez.',
   appName: 'Daftar',
   tagline: 'Le cahier de crédit de votre boutique, dans votre poche.',
   welcome: 'Bienvenue sur Daftar',
@@ -250,7 +263,6 @@ const fr: Dictionary = {
   start: 'Commencer',
   totalOwed: 'Total qu’on vous doit',
   customersInDebt: '{count} clients vous doivent',
-  customersInDebtOne: '1 client vous doit',
   today: 'Aujourd’hui',
   givenToday: 'Crédits donnés',
   receivedToday: 'Paiements reçus',
@@ -454,6 +466,13 @@ const fr: Dictionary = {
 };
 
 const ar: Dictionary = {
+  openingBalance: 'عليه دين سابق (من الدفتر الورقي)',
+  openingBalanceHint: 'اختياري. يُسجَّل كدين قديم ولا يُحسب ضمن ديون اليوم.',
+  openingBalanceEntry: 'دين سابق (الدفتر الورقي)',
+  amountInvalid: 'أدخل مبلغًا صحيحًا',
+  hideAmounts: 'إخفاء المبالغ',
+  showAmounts: 'إظهار المبالغ',
+  saveFailed: 'لم يُحفظ. لم يُسجَّل شيء — حاول مرة أخرى.',
   appName: 'دفتر',
   tagline: 'دفتر الديون لمحلك، في جيبك.',
   welcome: 'مرحبا بك في دفتر',
@@ -466,7 +485,6 @@ const ar: Dictionary = {
   start: 'ابدأ',
   totalOwed: 'مجموع الديون لك',
   customersInDebt: '{count} زبائن عليهم ديون',
-  customersInDebtOne: 'زبون واحد عليه دين',
   today: 'اليوم',
   givenToday: 'ديون أعطيت',
   receivedToday: 'دفعات استلمت',

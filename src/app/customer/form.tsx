@@ -10,9 +10,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FormField } from '@/components/form-field';
 import { AlertCircle, ContactRound, ICON_SCALE } from '@/components/icons';
 import { Card, DaftarButton, DaftarText, Row } from '@/components/ui';
-import { countCustomers, createCustomer, getCustomer, updateCustomer } from '@/db/repository';
+import { addEntry, countCustomers, createCustomer, getCustomer, updateCustomer } from '@/db/repository';
+import { parseAmount } from '@/domain/currency';
 import { ENFORCE_FREE_LIMIT, FREE_CUSTOMER_LIMIT } from '@/domain/plan';
-import { customerSchema, type CustomerFormValues } from '@/domain/schemas';
+import { newCustomerSchema, type NewCustomerFormValues } from '@/domain/schemas';
 import { haptic } from '@/lib/haptics';
 import { useSessionStore } from '@/state/session-store';
 import { useApp } from '@/state/use-app';
@@ -29,15 +30,15 @@ export default function CustomerFormScreen() {
   const editingId = id ? Number(id) : null;
   const [error, setError] = useState<string | null>(null);
 
-  const { control, handleSubmit, reset, setValue, formState } = useForm<CustomerFormValues>({
-    resolver: zodResolver(customerSchema),
-    defaultValues: { name: '', phone: '', note: '' },
+  const { control, handleSubmit, reset, setValue, formState } = useForm<NewCustomerFormValues>({
+    resolver: zodResolver(newCustomerSchema(settings.currency)),
+    defaultValues: { name: '', phone: '', note: '', openingBalance: '' },
   });
 
   useEffect(() => {
     if (editingId === null) return;
     getCustomer(db, editingId).then((c) => {
-      if (c) reset({ name: c.name, phone: c.phone ?? '', note: c.note ?? '' });
+      if (c) reset({ name: c.name, phone: c.phone ?? '', note: c.note ?? '', openingBalance: '' });
     });
   }, [db, editingId, reset]);
 
@@ -74,6 +75,18 @@ export default function CustomerFormScreen() {
         return;
       }
       const newId = await createCustomer(db, values);
+      // Moving from the paper notebook: what the customer already owes becomes an "old debt" entry.
+      const opening = parseAmount(values.openingBalance ?? '', settings.currency) ?? 0;
+      if (opening > 0) {
+        await addEntry(db, {
+          customerId: newId,
+          kind: 'credit',
+          amount: opening,
+          method: 'cash',
+          note: null,
+          creditType: 'opening',
+        });
+      }
       haptic.success();
       router.replace({ pathname: '/customer/[id]', params: { id: String(newId) } });
     } catch {
@@ -112,6 +125,20 @@ export default function CustomerFormScreen() {
               label={t('description')}
               placeholder={t('descriptionPlaceholder')}
             />
+            {editingId === null ? (
+              <View style={{ gap: 6 }}>
+                <FormField
+                  control={control}
+                  name="openingBalance"
+                  label={t('openingBalance')}
+                  keyboardType="decimal-pad"
+                  placeholder="0"
+                />
+                <DaftarText role="caption" tone="muted">
+                  {t('openingBalanceHint')}
+                </DaftarText>
+              </View>
+            ) : null}
           </Card>
 
           {error ? (

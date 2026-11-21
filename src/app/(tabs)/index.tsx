@@ -8,6 +8,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  Eye,
+  EyeOff,
   ICON_SCALE,
   ShieldCheck,
   UserPlus,
@@ -24,6 +26,7 @@ import {
 import { getSummary, listRecentEntries, type RecentEntry } from '@/db/repository';
 import { dayGroup } from '@/domain/report';
 import type { Summary } from '@/domain/types';
+import { haptic } from '@/lib/haptics';
 import { useDoubleBackToExit } from '@/lib/use-double-back';
 import { useSessionStore } from '@/state/session-store';
 import { useApp } from '@/state/use-app';
@@ -80,6 +83,8 @@ export default function HomeScreen() {
   const { colors } = useTheme();
   const lastSavedEntry = useSessionStore((s) => s.lastSavedEntry);
   const clearSavedEntry = useSessionStore((s) => s.clearSavedEntry);
+  const amountsHidden = useSessionStore((s) => s.amountsHidden);
+  const toggleAmountsHidden = useSessionStore((s) => s.toggleAmountsHidden);
 
   const [summary, setSummary] = useState<Summary | null>(null);
   const [recent, setRecent] = useState<RecentEntry[]>([]);
@@ -127,6 +132,21 @@ export default function HomeScreen() {
             </DaftarText>
           </Row>
         </View>
+        <Pressable
+          accessibilityRole="switch"
+          accessibilityState={{ checked: amountsHidden }}
+          accessibilityLabel={amountsHidden ? t('showAmounts') : t('hideAmounts')}
+          onPress={() => {
+            haptic.selection();
+            toggleAmountsHidden();
+          }}
+          style={[styles.eyeBtn, { backgroundColor: amountsHidden ? colors.primarySoft : 'transparent' }]}>
+          {amountsHidden ? (
+            <EyeOff size={ICON_SCALE.md.size} color={colors.primary} strokeWidth={ICON_SCALE.md.strokeWidth} />
+          ) : (
+            <Eye size={ICON_SCALE.md.size} color={colors.textSecondary} strokeWidth={ICON_SCALE.md.strokeWidth} />
+          )}
+        </Pressable>
       </Row>
 
       {summary === null ? (
@@ -228,6 +248,13 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 10,
     justifyContent: 'space-between',
+  },
+  eyeBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   offlinePill: {
     paddingHorizontal: 10,

@@ -133,7 +133,7 @@ export const Chip = DaftarChip;
 
 const styles = StyleSheet.create({
   chip: {
-    minHeight: 36,
+    minHeight: 44,
     borderRadius: 9999,
     borderWidth: 1,
     paddingHorizontal: 14,

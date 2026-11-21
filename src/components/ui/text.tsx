@@ -153,7 +153,7 @@ function hashName(name: string): number {
 
 /** Deterministic initials avatar with soft semantic Indigo Atelier surface tint (zero remote images). */
 export function Avatar({ name, size = 42 }: { name: string; size?: number }) {
-  const { colors } = useTheme();
+  const { isDark } = useTheme();
   const { settings } = useApp();
 
   const initials = name
@@ -163,12 +163,21 @@ export function Avatar({ name, size = 42 }: { name: string; size?: number }) {
     .map((p) => p[0]?.toUpperCase() ?? '')
     .join('');
 
-  const tints = [
-    { bg: colors.primarySoft, fg: colors.primary },
-    { bg: colors.creditSoft, fg: colors.creditDeep },
-    { bg: colors.paymentSoft, fg: colors.paymentDeep },
-    { bg: colors.forgivenSoft, fg: colors.forgiven },
-  ];
+  // Neutral identity tints only: credit / payment / forgiven colours carry meaning (money state),
+  // so an avatar must never borrow them (a customer who paid would otherwise look "in debt").
+  const tints = isDark
+    ? [
+        { bg: '#1B2B42', fg: '#9CC0EA' },
+        { bg: '#2A2F3A', fg: '#C9CFDA' },
+        { bg: '#1E3236', fg: '#9ED0D6' },
+        { bg: '#2E2A38', fg: '#C8BEDD' },
+      ]
+    : [
+        { bg: '#E6EDF5', fg: '#1E3A5F' },
+        { bg: '#E8E4DC', fg: '#3B4250' },
+        { bg: '#E1EEF0', fg: '#1F5560' },
+        { bg: '#ECE8F2', fg: '#4A3F66' },
+      ];
   const palette = tints[hashName(name.trim() || '?') % tints.length];
   const radius = Math.round((size / 42) * 13);
 

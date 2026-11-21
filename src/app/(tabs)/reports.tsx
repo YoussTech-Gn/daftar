@@ -14,7 +14,7 @@ import { useTheme } from '@/theme';
 /** 03 · Reports: 3-KPI month row, Ring Chart, Debts by age, Top 5 debtors. */
 export default function ReportsScreen() {
   const db = useSQLiteContext();
-  const { t } = useApp();
+  const { t, isRTL } = useApp();
   const { colors, shadows } = useTheme();
   const [report, setReport] = useState<PeriodReport | null>(null);
   const [ages, setAges] = useState<DebtAge[]>([]);
@@ -148,6 +148,8 @@ export default function ReportsScreen() {
                       {
                         width: `${(buckets[b].amount / maxBucket) * 100}%`,
                         backgroundColor: bucketColors[i],
+                        // Bars grow from the reading start: right edge in Arabic.
+                        alignSelf: isRTL ? 'flex-end' : 'flex-start',
                       },
                     ]}
                   />

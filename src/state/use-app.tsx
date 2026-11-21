@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, type ReactNode } from 'react';
 
 import { formatAmount } from '@/domain/currency';
 import { fillTemplate } from '@/domain/reminder';
+import { pluralText } from '@/i18n/plural';
 import { DICTIONARIES, LANGUAGES, type TranslationKey } from '@/i18n/translations';
 import { useSettingsStore, type AppSettings } from '@/state/settings-store';
 
@@ -46,7 +47,7 @@ export function useApp(): AppApi {
       settings,
       isRTL: LANGUAGES.find((l) => l.code === settings.language)?.rtl ?? false,
       t: (key, values) => {
-        const text = dict[key] ?? DICTIONARIES.en[key];
+        const text = pluralText(settings.language, key, values) ?? dict[key] ?? DICTIONARIES.en[key];
         return values
           ? fillTemplate(text, Object.fromEntries(Object.entries(values).map(([k, v]) => [k, String(v)])))
           : text;

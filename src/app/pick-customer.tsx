@@ -50,6 +50,7 @@ export default function PickCustomerScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('cancel')}
+          hitSlop={6}
           onPress={() => {
             haptic.selection();
             router.back();

@@ -10,6 +10,29 @@ import {
   getTextStyle,
 } from '@/theme/tokens';
 
+function luminance(hex: string): number {
+  const h = hex.replace('#', '');
+  const [r, g, b] = [0, 2, 4]
+    .map((i) => parseInt(h.slice(i, i + 2), 16) / 255)
+    .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function contrast(a: string, b: string): number {
+  const [x, y] = [luminance(a), luminance(b)];
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+}
+
+function hueOf(hex: string): number {
+  const h = hex.replace('#', '');
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+  const max = Math.max(r, g, b);
+  const d = max - Math.min(r, g, b);
+  if (d === 0) return 0;
+  const hue = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return (hue * 60 + 360) % 360;
+}
+
 describe('Indigo Atelier design tokens', () => {
   it('forbids pure white #FFFFFF anywhere in light or dark color tokens', () => {
     const allHexes = [...Object.values(LIGHT_COLORS), ...Object.values(DARK_COLORS)].map((v) =>
@@ -23,26 +46,23 @@ describe('Indigo Atelier design tokens', () => {
     expect(Object.keys(LIGHT_COLORS).sort()).toEqual(Object.keys(DARK_COLORS).sort());
   });
 
-  it('uses psychological muted terracotta red for money out (credit) and calm relief green for money in (payment)', () => {
-    expect(LIGHT_COLORS.bg).toBe('#F2F0EB');
-    expect(LIGHT_COLORS.surface).toBe('#FAF9F6');
-    expect(LIGHT_COLORS.credit).toBe('#B83B3B');
-    expect(LIGHT_COLORS.creditDeep).toBe('#962D2D');
-    expect(LIGHT_COLORS.creditSoft).toBe('#FAECEC');
-    expect(LIGHT_COLORS.onCredit).toBe('#FAF9F6');
-    expect(LIGHT_COLORS.payment).toBe('#157A4F');
-    expect(LIGHT_COLORS.paymentDeep).toBe('#10613E');
-    expect(LIGHT_COLORS.paymentSoft).toBe('#E5F4EC');
-    expect(LIGHT_COLORS.onPayment).toBe('#FAF9F6');
+  it('keeps text readable: muted and secondary text reach WCAG AA (4.5:1) on bg and surface', () => {
+    for (const c of [LIGHT_COLORS, DARK_COLORS]) {
+      for (const fg of [c.text, c.textSecondary, c.textMuted, c.creditDeep, c.paymentDeep, c.forgiven, c.primary]) {
+        expect(contrast(fg, c.bg)).toBeGreaterThanOrEqual(4.5);
+        expect(contrast(fg, c.surface)).toBeGreaterThanOrEqual(4.5);
+      }
+      // Cancelled entries are struck through but must stay legible (large-text AA).
+      expect(contrast(c.cancelled, c.surface)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
 
-    expect(DARK_COLORS.credit).toBe('#EC7878');
-    expect(DARK_COLORS.creditDeep).toBe('#F39696');
-    expect(DARK_COLORS.creditSoft).toBe('#331B1E');
-    expect(DARK_COLORS.onCredit).toBe('#240A0A');
-    expect(DARK_COLORS.payment).toBe('#4ADE80');
-    expect(DARK_COLORS.paymentDeep).toBe('#6EE7A0');
-    expect(DARK_COLORS.paymentSoft).toBe('#132C21');
-    expect(DARK_COLORS.onPayment).toBe('#062011');
+  it('does not paint debts like an alarm: credit is a warm amber, clearly apart from danger red', () => {
+    for (const c of [LIGHT_COLORS, DARK_COLORS]) {
+      expect(hueOf(c.credit)).toBeGreaterThan(20);
+      expect(hueOf(c.credit)).toBeLessThan(45);
+      expect(hueOf(c.danger) < 10 || hueOf(c.danger) > 350).toBe(true);
+    }
   });
 
   it('resolves Readex Pro for Arabic and Manrope for Latin without fontWeight collisions', () => {
@@ -56,7 +76,7 @@ describe('Indigo Atelier design tokens', () => {
     expect(arDisplay.fontWeight).toBeUndefined();
 
     const compactFr = getTextStyle('displayAmount', 'fr', { compact: true });
-    expect(compactFr.fontSize).toBe(28);
+    expect(compactFr.fontSize).toBe(30);
     expect(compactFr.fontFamily).toBe('Manrope_700Bold');
   });
 

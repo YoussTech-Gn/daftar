@@ -23,6 +23,17 @@ export const customerSchema = z.object({
 });
 export type CustomerFormValues = z.input<typeof customerSchema>;
 
+/** New customer form: the same fields plus an optional debt carried over from the paper notebook. */
+export function newCustomerSchema(currency: string) {
+  return customerSchema.extend({
+    openingBalance: z
+      .string()
+      .trim()
+      .refine((v) => v === '' || (parseAmount(v, currency) ?? 0) > 0, msg('amountInvalid')),
+  });
+}
+export type NewCustomerFormValues = z.input<ReturnType<typeof newCustomerSchema>>;
+
 export function productSchema(currency: string) {
   return z.object({
     name: z.string().trim().min(1, msg('nameRequired')).max(60),

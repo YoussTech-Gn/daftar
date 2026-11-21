@@ -80,7 +80,7 @@ export function StampSaveOverlay({
           <DaftarText role="heading" weight="700" tone="primary" align="center">
             {t('stampSaved')}
           </DaftarText>
-          <AmountDisplay amount={amount} size="title" color={colors.text} align="center" />
+          <AmountDisplay amount={amount} size="title" alwaysVisible color={colors.text} align="center" />
         </Animated.View>
       </View>
     </Modal>

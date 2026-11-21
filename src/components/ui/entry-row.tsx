@@ -12,6 +12,7 @@ import Animated, {
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  BookOpen,
   Ban,
   HeartHandshake,
   ICON_SCALE,
@@ -72,7 +73,7 @@ export function EntryRow({
   // Animated strikethrough transition when entry becomes cancelled
   const wasCancelledRef = useRef(cancelled);
   const strikeProgress = useSharedValue(cancelled ? 1 : 0);
-  const rowOpacity = useSharedValue(cancelled ? 0.58 : 1);
+  const rowOpacity = useSharedValue(cancelled ? 0.8 : 1);
 
   useEffect(() => {
     const changed = wasCancelledRef.current !== cancelled;
@@ -80,7 +81,7 @@ export function EntryRow({
 
     if (reducedMotion || !changed) {
       strikeProgress.value = cancelled ? 1 : 0;
-      rowOpacity.value = cancelled ? 0.58 : 1;
+      rowOpacity.value = cancelled ? 0.8 : 1;
       return;
     }
 
@@ -88,7 +89,7 @@ export function EntryRow({
       duration: DURATION.cancelStrike,
       easing: EASING.quadOut,
     });
-    rowOpacity.value = withTiming(cancelled ? 0.58 : 1, {
+    rowOpacity.value = withTiming(cancelled ? 0.8 : 1, {
       duration: DURATION.cancelStrike,
       easing: EASING.quadOut,
     });
@@ -171,6 +172,12 @@ export function EntryRow({
     iconColor = colors.paymentDeep;
     amountColor = colors.paymentDeep;
     sign = '−';
+  } else if (creditType === 'opening') {
+    Icon = BookOpen;
+    iconBg = colors.surfaceSunken;
+    iconColor = colors.textSecondary;
+    amountColor = colors.creditDeep;
+    sign = '+';
   } else if (creditType === 'goods') {
     Icon = ShoppingBag;
     iconBg = colors.creditSoft;

@@ -52,7 +52,7 @@ export function LedgerHeroCard({
         </DaftarText>
         <View style={[styles.countPill, { backgroundColor: colors.primarySoft }]}>
           <DaftarText role="caption" tone="primary" weight="600" numberOfLines={1}>
-            {customersInDebt === 1 ? t('customersInDebtOne') : t('customersInDebt', { count: customersInDebt })}
+            {t('customersInDebt', { count: customersInDebt })}
           </DaftarText>
         </View>
       </Row>

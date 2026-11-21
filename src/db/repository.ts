@@ -418,9 +418,12 @@ export interface PeriodReport {
 }
 
 /** Totals between `from` (inclusive) and `to` (exclusive), ignoring cancelled entries and trashed customers. */
+/** Opening balances were lent before the app: they are owed, but they are not "credit given" in a period. */
+const NOT_OPENING = "COALESCE(e.credit_type, '') <> 'opening'";
+
 export async function getPeriodReport(db: SQLiteDatabase, from: number, to: number): Promise<PeriodReport> {
   const period = await db.getFirstAsync<{ credit: number | null; paid: number | null; forgiven: number | null }>(
-    `SELECT SUM(CASE WHEN e.kind = 'credit' THEN e.amount END) AS credit,
+    `SELECT SUM(CASE WHEN e.kind = 'credit' AND ${NOT_OPENING} THEN e.amount END) AS credit,
             SUM(CASE WHEN e.kind = 'payment' THEN e.amount END) AS paid,
             SUM(CASE WHEN e.kind = 'forgiven' THEN e.amount END) AS forgiven
      FROM entries e JOIN customers c ON c.id = e.customer_id
@@ -488,7 +491,7 @@ export async function getSummary(db: SQLiteDatabase): Promise<Summary> {
   );
   // Forgiven amounts are not money received, so they are not in "payments today".
   const today = await db.getFirstAsync<{ credit: number | null; payment: number | null }>(
-    `SELECT SUM(CASE WHEN e.kind = 'credit' THEN e.amount END) AS credit,
+    `SELECT SUM(CASE WHEN e.kind = 'credit' AND ${NOT_OPENING} THEN e.amount END) AS credit,
             SUM(CASE WHEN e.kind = 'payment' THEN e.amount END) AS payment
      FROM entries e JOIN customers c ON c.id = e.customer_id
      WHERE e.created_at >= ? AND e.cancelled_at IS NULL AND c.deleted_at IS NULL`,

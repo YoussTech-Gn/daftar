@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   quickPill: {
-    minHeight: 32,
+    minHeight: 36,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 9999,

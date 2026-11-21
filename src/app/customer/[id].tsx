@@ -128,7 +128,8 @@ export default function CustomerScreen() {
       : 0;
 
   const lastCredit = entries.find((e) => e.kind === 'credit' && !e.cancelledAt);
-  const lastPayment = entries.find((e) => e.kind !== 'credit' && !e.cancelledAt);
+  // Forgiveness is not money received, so it never counts as the last payment.
+  const lastPayment = entries.find((e) => e.kind === 'payment' && !e.cancelledAt);
   const shortDate = (ts: number) =>
     new Date(ts).toLocaleDateString(settings.language, { day: 'numeric', month: 'short' });
 
@@ -141,6 +142,7 @@ export default function CustomerScreen() {
     if (e.kind === 'payment') return t('paymentEntry');
     if (e.creditType === 'cash') return t('creditCash');
     if (e.creditType === 'goods') return t('creditGoods');
+    if (e.creditType === 'opening') return t('openingBalanceEntry');
     return t('creditEntry');
   }
 
@@ -531,7 +533,7 @@ export default function CustomerScreen() {
 
 const styles = StyleSheet.create({
   headerEditBtn: {
-    minHeight: 40,
+    minHeight: 48,
     justifyContent: 'center',
     paddingHorizontal: 4,
   },

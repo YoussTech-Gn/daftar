@@ -12,6 +12,7 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { formatAmount } from '@/domain/currency';
+import { useSessionStore } from '@/state/session-store';
 import { useApp } from '@/state/use-app';
 import { DURATION, getFontFamily, getTextStyle, NUMERIC_TEXT_STYLE, useTheme, type FontWeightKey } from '@/theme';
 
@@ -54,10 +55,13 @@ export function AmountDisplay({
   align,
   numberOfLines = 1,
   strikeThrough = false,
+  alwaysVisible = false,
   style,
 }: {
   amount: number;
   currency?: string;
+  /** Amounts being typed or just confirmed stay visible even when the eye hides the others. */
+  alwaysVisible?: boolean;
   sign?: '' | '+' | '−';
   size?: AmountSize;
   color?: string;
@@ -128,7 +132,10 @@ export function AmountDisplay({
   }));
 
   const targetFormatted = formatDisplayAmount(amount, resolvedCurrency, sign);
-  const visibleFormatted = formatDisplayAmount(animate && !reducedMotion ? shownMinor : amount, resolvedCurrency, sign);
+  const hidden = useSessionStore((st) => st.amountsHidden) && !alwaysVisible;
+  const visibleFormatted = hidden
+    ? '•••••'
+    : formatDisplayAmount(animate && !reducedMotion ? shownMinor : amount, resolvedCurrency, sign);
 
   // Exclude isolate markers from length measurement so >12 visible chars triggers 28sp compact scale.
   const visibleCharCount = targetFormatted.replace(/[\u2066\u2069]/g, '').length;
@@ -139,8 +146,8 @@ export function AmountDisplay({
   return (
     <Animated.Text
       numberOfLines={numberOfLines}
-      adjustsFontSizeToFit={size === 'display'}
-      minimumFontScale={0.78}
+      adjustsFontSizeToFit={numberOfLines === 1}
+      minimumFontScale={size === 'display' ? 0.7 : 0.6}
       style={[
         roleStyle,
         NUMERIC_TEXT_STYLE,

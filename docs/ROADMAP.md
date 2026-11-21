@@ -32,6 +32,17 @@
 - [x] Settle all (pre-filled payment) · Forgive (own entry kind) · Cancel instead of delete + Undo + restore
 - [x] Customer trash (30 days, auto purge) · Activity log · CSV `status` column · Lucide icons everywhere
 
+## ✅ External review fixes (2026-11-21, decision 0016)
+- [x] Credit in warm amber (not alarm red) · AA contrast for muted / cancelled text · neutral avatars
+- [x] Opening balance ("old debt" from the paper notebook) excluded from "credit given today"
+- [x] Hide-amounts eye · pinned keypad + Save · save-error toast · Arabic plurals · mirrored report bars · 48 dp targets
+
+## Next — from the external review (decision 0016)
+- [ ] Read-only entry detail sheet (items, method, who cancelled and why)
+- [ ] Forgot PIN: recovery code shown once at PIN setup
+- [ ] Motion: sliding tab indicator, money-direction cue, own forgive animation, list → customer transition
+- [ ] Setting "ask for a receipt after each entry"
+
 ## Next — from analysis 0001
 - [ ] Payment promises on credit (end of week / month / payday / date / when he can)
 - [ ] Customer modes: Normal / Trusted (no pressure) / Give time (hardship)
