@@ -23,13 +23,20 @@ export function offerReceipt(input: ReceiptInput, onDone: () => void): void {
     onDone();
     return;
   }
-  const message = t('receiptTemplate', {
-    shop: input.shopName || t('appName'),
-    entry: input.kind === 'credit' ? t('receiptCredit') : t('receiptPayment'),
-    amount: money(input.amount),
-    items: input.items ? ` (${input.items})` : '',
-    balance: money(input.newBalance),
-  });
+  const shop = input.shopName || t('appName');
+  const amount = money(input.amount);
+  const message =
+    input.kind === 'forgiven'
+      ? t('receiptForgivenTemplate', { shop, amount })
+      : input.kind === 'payment' && input.newBalance === 0
+        ? t('receiptSettledTemplate', { shop, amount })
+        : t('receiptTemplate', {
+            shop,
+            entry: input.kind === 'credit' ? t('receiptCredit') : t('receiptPayment'),
+            amount,
+            items: input.items ? ` (${input.items})` : '',
+            balance: money(input.newBalance),
+          });
   const phone = customer.phone;
   Alert.alert(t('sendReceiptTitle'), t('sendReceiptBody', { name: customer.name }), [
     { text: t('notNow'), style: 'cancel', onPress: onDone },

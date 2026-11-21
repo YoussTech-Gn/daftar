@@ -15,7 +15,8 @@ interface AppApi {
   settings: AppSettings;
   isRTL: boolean;
   t: Translate;
-  money: (minor: number) => string;
+  /** Formats an amount; an optional sign ("+" / "−") is placed inside the same LTR isolate. */
+  money: (minor: number, sign?: string) => string;
   updateSettings: (patch: Partial<AppSettings>) => Promise<void>;
 }
 
@@ -51,7 +52,8 @@ export function useApp(): AppApi {
           : text;
       },
       // Left-to-right isolate (U+2066 … U+2069) so "535 000 GNF" is not reversed inside Arabic text.
-      money: (minor) => `⁦${formatAmount(minor, settings.currency)}⁩`,
+      // The sign goes inside the isolate too: a sign outside it made Android measure the text too short.
+      money: (minor, sign = '') => `⁦${sign}${formatAmount(minor, settings.currency)}⁩`,
       updateSettings,
     };
   }, [ready, settings, updateSettings]);

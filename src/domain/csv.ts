@@ -9,7 +9,8 @@ function csvCell(value: string | number | null): string {
 /** Builds a CSV of all entries (one row per entry). */
 export function buildCsv(customers: Customer[], entries: Entry[], currency: string): string {
   const byId = new Map(customers.map((c) => [c.id, c]));
-  const header = ['date', 'customer', 'phone', 'type', 'amount', 'method', 'note'];
+  // `status` (decision 0013): cancelled entries are exported too, so the spreadsheet matches the history.
+  const header = ['date', 'customer', 'phone', 'type', 'amount', 'method', 'note', 'status'];
   const rows = entries.map((e) => {
     const c = byId.get(e.customerId);
     return [
@@ -20,6 +21,7 @@ export function buildCsv(customers: Customer[], entries: Entry[], currency: stri
       formatAmount(e.amount, currency, false),
       e.method,
       e.note,
+      e.cancelledAt ? 'cancelled' : 'active',
     ]
       .map(csvCell)
       .join(',');

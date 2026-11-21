@@ -11,8 +11,10 @@ import {
   FileSpreadsheet,
   HardDriveDownload,
   HardDriveUpload,
+  History,
   LockKeyhole,
   LockKeyholeOpen,
+  Trash2,
 } from '@/components/icons';
 import { Button, Card, Chip, ChipRow, Txt } from '@/components/ui';
 import { CURRENCIES } from '@/domain/currency';
@@ -153,6 +155,8 @@ export default function SettingsScreen() {
           onPress={() => run(() => shareBackup(db))}
         />
         <Button label={t('restoreJson')} icon={HardDriveUpload} variant="secondary" onPress={restore} />
+        <Button label={t('activity')} icon={History} variant="secondary" onPress={() => router.push('/activity')} />
+        <Button label={t('trash')} icon={Trash2} variant="secondary" onPress={() => router.push('/trash')} />
       </Card>
 
       <Card style={{ gap: 4 }}>

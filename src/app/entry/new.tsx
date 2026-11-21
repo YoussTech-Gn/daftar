@@ -1,6 +1,6 @@
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,6 +10,7 @@ import { QtySheet } from '@/components/qty-sheet';
 import { Button, Chip, ChipRow, Row, Txt } from '@/components/ui';
 import { addEntry, bumpProductUse, getCustomer, listProducts } from '@/db/repository';
 import {
+  amountToExpr,
   applyKey,
   formatQty,
   itemsToNote,
@@ -39,7 +40,10 @@ export default function NewEntryScreen() {
   const db = useSQLiteContext();
   const { t, settings, money, isRTL } = useApp();
   const palette = usePalette();
-  const params = useLocalSearchParams<{ customerId: string; kind: EntryKind }>();
+  const params = useLocalSearchParams<{ customerId: string; kind: EntryKind; settle?: string }>();
+  // "Settle all" (decision 0013): the payment screen opens pre-filled with the whole balance.
+  const settle = params.settle === '1';
+  const prefilled = useRef(false);
   const customerId = Number(params.customerId);
   const kind: EntryKind = params.kind === 'payment' ? 'payment' : 'credit';
   const color = kind === 'credit' ? palette.credit : palette.payment;
@@ -59,9 +63,15 @@ export default function NewEntryScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      getCustomer(db, customerId).then(setCustomer);
+      getCustomer(db, customerId).then((c) => {
+        setCustomer(c);
+        if (settle && c && c.balance > 0 && !prefilled.current) {
+          prefilled.current = true;
+          setExpr(amountToExpr(c.balance, settings.currency));
+        }
+      });
       if (kind === 'credit') listProducts(db).then(setProducts);
-    }, [db, customerId, kind]),
+    }, [db, customerId, kind, settle, settings.currency]),
   );
 
   const isGoods = kind === 'credit' && creditType === 'goods';
@@ -116,6 +126,7 @@ export default function NewEntryScreen() {
       method: kind === 'payment' ? method : 'cash',
       note: fullNote || null,
       creditType: kind === 'credit' ? creditType : null,
+      settlesAll: kind === 'payment' && total === customer.balance,
       items: activeItems.map((i) => ({
         productId: i.id,
         name: i.name,

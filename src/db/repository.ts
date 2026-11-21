@@ -1,6 +1,8 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import type {
+  ActivityAction,
+  ActivityEntry,
   CreditType,
   Customer,
   CustomerWithBalance,
@@ -18,6 +20,7 @@ interface CustomerRow {
   name: string;
   phone: string | null;
   note: string | null;
+  deleted_at: number | null;
   created_at: number;
   balance: number | null;
   last_activity_at: number | null;
@@ -31,6 +34,8 @@ interface EntryRow {
   method: PaymentMethod;
   note: string | null;
   credit_type: CreditType | null;
+  cancelled_at: number | null;
+  cancel_reason: string | null;
   created_at: number;
 }
 
@@ -52,6 +57,20 @@ interface EntryItemRow {
   total: number;
 }
 
+interface ActivityRow {
+  id: number;
+  at: number;
+  action: ActivityAction;
+  customer_id: number | null;
+  customer_name: string | null;
+  entry_id: number | null;
+  amount: number | null;
+  details: string | null;
+}
+
+/** Customers in the trash longer than this are permanently removed (decision 0013). */
+export const TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+
 function toItem(row: EntryItemRow): EntryItem {
   return {
     productId: row.product_id,
@@ -63,13 +82,16 @@ function toItem(row: EntryItemRow): EntryItem {
   };
 }
 
-const BALANCE_SQL = `
-  SELECT c.id, c.name, c.phone, c.note, c.created_at,
+/** Balance = credits − payments − forgiven, ignoring cancelled entries. */
+const CUSTOMER_SQL = `
+  SELECT c.id, c.name, c.phone, c.note, c.deleted_at, c.created_at,
     COALESCE(SUM(CASE WHEN e.kind = 'credit' THEN e.amount ELSE -e.amount END), 0) AS balance,
     MAX(e.created_at) AS last_activity_at
   FROM customers c
-  LEFT JOIN entries e ON e.customer_id = c.id
+  LEFT JOIN entries e ON e.customer_id = c.id AND e.cancelled_at IS NULL
   WHERE c.archived = 0`;
+
+const ACTIVE = 'AND c.deleted_at IS NULL';
 
 function toCustomer(row: CustomerRow): CustomerWithBalance {
   return {
@@ -77,6 +99,7 @@ function toCustomer(row: CustomerRow): CustomerWithBalance {
     name: row.name,
     phone: row.phone,
     note: row.note,
+    deletedAt: row.deleted_at,
     createdAt: row.created_at,
     balance: row.balance ?? 0,
     lastActivityAt: row.last_activity_at,
@@ -92,6 +115,8 @@ function toEntry(row: EntryRow): Entry {
     method: row.method,
     note: row.note,
     creditType: row.credit_type,
+    cancelledAt: row.cancelled_at,
+    cancelReason: row.cancel_reason,
     createdAt: row.created_at,
   };
 }
@@ -100,25 +125,63 @@ function toProduct(row: ProductRow): Product {
   return { id: row.id, name: row.name, price: row.price, unit: row.unit ?? 'piece', useCount: row.use_count };
 }
 
+// ── Activity log ────────────────────────────────────────────────────────────
+
+export async function logActivity(
+  db: SQLiteDatabase,
+  action: ActivityAction,
+  data: { customerId?: number | null; entryId?: number | null; amount?: number | null; details?: string | null } = {},
+): Promise<void> {
+  await db.runAsync(
+    'INSERT INTO activity_log (at, action, customer_id, entry_id, amount, details) VALUES (?, ?, ?, ?, ?, ?)',
+    [Date.now(), action, data.customerId ?? null, data.entryId ?? null, data.amount ?? null, data.details ?? null],
+  );
+}
+
+/** Most recent first. Customer names are joined live (details keep the name for purged customers). */
+export async function listActivity(db: SQLiteDatabase, limit = 200): Promise<ActivityEntry[]> {
+  const rows = await db.getAllAsync<ActivityRow>(
+    `SELECT a.id, a.at, a.action, a.customer_id, c.name AS customer_name, a.entry_id, a.amount, a.details
+     FROM activity_log a LEFT JOIN customers c ON c.id = a.customer_id
+     ORDER BY a.at DESC, a.id DESC LIMIT ?`,
+    [limit],
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    at: r.at,
+    action: r.action,
+    customerId: r.customer_id,
+    customerName: r.customer_name,
+    entryId: r.entry_id,
+    amount: r.amount,
+    details: r.details,
+  }));
+}
+
+// ── Customers ───────────────────────────────────────────────────────────────
+
 export async function listCustomers(db: SQLiteDatabase, search = ''): Promise<CustomerWithBalance[]> {
   const term = search.trim();
   const order = 'GROUP BY c.id ORDER BY balance DESC, last_activity_at DESC, c.name';
   const rows = term
     ? await db.getAllAsync<CustomerRow>(
-        `${BALANCE_SQL} AND (c.name LIKE ? OR c.phone LIKE ? OR c.note LIKE ?) ${order}`,
+        `${CUSTOMER_SQL} ${ACTIVE} AND (c.name LIKE ? OR c.phone LIKE ? OR c.note LIKE ?) ${order}`,
         [`%${term}%`, `%${term}%`, `%${term}%`],
       )
-    : await db.getAllAsync<CustomerRow>(`${BALANCE_SQL} ${order}`);
+    : await db.getAllAsync<CustomerRow>(`${CUSTOMER_SQL} ${ACTIVE} ${order}`);
   return rows.map(toCustomer);
 }
 
+/** Returns the customer even if in the trash (the page shows a banner then). */
 export async function getCustomer(db: SQLiteDatabase, id: number): Promise<CustomerWithBalance | null> {
-  const row = await db.getFirstAsync<CustomerRow>(`${BALANCE_SQL} AND c.id = ? GROUP BY c.id`, [id]);
+  const row = await db.getFirstAsync<CustomerRow>(`${CUSTOMER_SQL} AND c.id = ? GROUP BY c.id`, [id]);
   return row ? toCustomer(row) : null;
 }
 
 export async function countCustomers(db: SQLiteDatabase): Promise<number> {
-  const row = await db.getFirstAsync<{ n: number }>('SELECT COUNT(*) AS n FROM customers WHERE archived = 0');
+  const row = await db.getFirstAsync<{ n: number }>(
+    'SELECT COUNT(*) AS n FROM customers WHERE archived = 0 AND deleted_at IS NULL',
+  );
   return row?.n ?? 0;
 }
 
@@ -135,6 +198,7 @@ export async function createCustomer(db: SQLiteDatabase, input: CustomerInput): 
     input.note?.trim() || null,
     Date.now(),
   ]);
+  await logActivity(db, 'customer_add', { customerId: result.lastInsertRowId });
   return result.lastInsertRowId;
 }
 
@@ -145,16 +209,53 @@ export async function updateCustomer(db: SQLiteDatabase, id: number, input: Cust
     input.note?.trim() || null,
     id,
   ]);
+  await logActivity(db, 'customer_edit', { customerId: id });
 }
 
-export async function deleteCustomer(db: SQLiteDatabase, id: number): Promise<void> {
+/** Moves a customer to the trash. Nothing is erased; restorable for 30 days. */
+export async function trashCustomer(db: SQLiteDatabase, id: number): Promise<void> {
+  await db.runAsync('UPDATE customers SET deleted_at = ? WHERE id = ?', [Date.now(), id]);
+  await logActivity(db, 'customer_trash', { customerId: id });
+}
+
+export async function restoreCustomer(db: SQLiteDatabase, id: number): Promise<void> {
+  await db.runAsync('UPDATE customers SET deleted_at = NULL WHERE id = ?', [id]);
+  await logActivity(db, 'customer_restore', { customerId: id });
+}
+
+export async function listTrash(db: SQLiteDatabase): Promise<CustomerWithBalance[]> {
+  const rows = await db.getAllAsync<CustomerRow>(
+    `${CUSTOMER_SQL} AND c.deleted_at IS NOT NULL GROUP BY c.id ORDER BY c.deleted_at DESC`,
+  );
+  return rows.map(toCustomer);
+}
+
+/** Permanently removes one customer and all their entries. */
+async function purgeCustomer(db: SQLiteDatabase, id: number, name: string): Promise<void> {
   await db.withTransactionAsync(async () => {
+    await db.runAsync(
+      'DELETE FROM entry_items WHERE entry_id IN (SELECT id FROM entries WHERE customer_id = ?)',
+      [id],
+    );
     await db.runAsync('DELETE FROM entries WHERE customer_id = ?', [id]);
     await db.runAsync('DELETE FROM customers WHERE id = ?', [id]);
+    await logActivity(db, 'customer_purge', { customerId: id, details: name });
   });
 }
 
-/** Entries of a customer, newest first, each with its item lines. */
+/** Removes customers that stayed in the trash longer than the retention period. Returns how many. */
+export async function purgeExpiredTrash(db: SQLiteDatabase, now = Date.now()): Promise<number> {
+  const expired = await db.getAllAsync<{ id: number; name: string }>(
+    'SELECT id, name FROM customers WHERE deleted_at IS NOT NULL AND deleted_at < ?',
+    [now - TRASH_RETENTION_MS],
+  );
+  for (const c of expired) await purgeCustomer(db, c.id, c.name);
+  return expired.length;
+}
+
+// ── Entries ─────────────────────────────────────────────────────────────────
+
+/** Entries of a customer, newest first (cancelled ones included), each with its item lines. */
 export async function listEntries(db: SQLiteDatabase, customerId: number): Promise<Entry[]> {
   const rows = await db.getAllAsync<EntryRow>(
     'SELECT * FROM entries WHERE customer_id = ? ORDER BY created_at DESC, id DESC',
@@ -181,9 +282,11 @@ export interface NewEntry {
   note: string | null;
   creditType?: CreditType | null;
   items?: EntryItem[];
+  /** Logged as 'settle' instead of 'entry_add' (a payment that clears the whole balance). */
+  settlesAll?: boolean;
 }
 
-/** Saves an entry and its item lines in one transaction. */
+/** Saves an entry and its item lines in one transaction, and logs it. */
 export async function addEntry(db: SQLiteDatabase, input: NewEntry): Promise<number> {
   let entryId = 0;
   await db.withTransactionAsync(async () => {
@@ -206,14 +309,40 @@ export async function addEntry(db: SQLiteDatabase, input: NewEntry): Promise<num
         [entryId, item.productId, item.name, item.unit, item.qty, item.unitPrice, item.total],
       );
     }
+    const action: ActivityAction =
+      input.kind === 'forgiven' ? 'forgive' : input.settlesAll ? 'settle' : 'entry_add';
+    await logActivity(db, action, {
+      customerId: input.customerId,
+      entryId,
+      amount: input.amount,
+      details: input.kind,
+    });
   });
   return entryId;
 }
 
-export async function deleteEntry(db: SQLiteDatabase, id: number): Promise<void> {
-  await db.withTransactionAsync(async () => {
-    await db.runAsync('DELETE FROM entry_items WHERE entry_id = ?', [id]);
-    await db.runAsync('DELETE FROM entries WHERE id = ?', [id]);
+/** Cancels an entry: it stays in the history but no longer counts. */
+export async function cancelEntry(db: SQLiteDatabase, entry: Entry, reason: string | null = null): Promise<void> {
+  await db.runAsync('UPDATE entries SET cancelled_at = ?, cancel_reason = ? WHERE id = ?', [
+    Date.now(),
+    reason,
+    entry.id,
+  ]);
+  await logActivity(db, 'entry_cancel', {
+    customerId: entry.customerId,
+    entryId: entry.id,
+    amount: entry.amount,
+    details: entry.kind,
+  });
+}
+
+export async function restoreEntry(db: SQLiteDatabase, entry: Entry): Promise<void> {
+  await db.runAsync('UPDATE entries SET cancelled_at = NULL, cancel_reason = NULL WHERE id = ?', [entry.id]);
+  await logActivity(db, 'entry_restore', {
+    customerId: entry.customerId,
+    entryId: entry.id,
+    amount: entry.amount,
+    details: entry.kind,
   });
 }
 
@@ -273,12 +402,14 @@ function startOfToday(): number {
 
 export async function getSummary(db: SQLiteDatabase): Promise<Summary> {
   const owed = await db.getFirstAsync<{ total: number | null; n: number }>(
-    `SELECT SUM(balance) AS total, COUNT(*) AS n FROM (${BALANCE_SQL} GROUP BY c.id) WHERE balance > 0`,
+    `SELECT SUM(balance) AS total, COUNT(*) AS n FROM (${CUSTOMER_SQL} ${ACTIVE} GROUP BY c.id) WHERE balance > 0`,
   );
+  // Forgiven amounts are not money received, so they are not in "payments today".
   const today = await db.getFirstAsync<{ credit: number | null; payment: number | null }>(
-    `SELECT SUM(CASE WHEN kind = 'credit' THEN amount END) AS credit,
-            SUM(CASE WHEN kind = 'payment' THEN amount END) AS payment
-     FROM entries WHERE created_at >= ?`,
+    `SELECT SUM(CASE WHEN e.kind = 'credit' THEN e.amount END) AS credit,
+            SUM(CASE WHEN e.kind = 'payment' THEN e.amount END) AS payment
+     FROM entries e JOIN customers c ON c.id = e.customer_id
+     WHERE e.created_at >= ? AND e.cancelled_at IS NULL AND c.deleted_at IS NULL`,
     [startOfToday()],
   );
   return {
@@ -318,7 +449,7 @@ export interface BackupData {
 
 export async function exportAll(db: SQLiteDatabase): Promise<BackupData> {
   const customers = await db.getAllAsync<CustomerRow>(
-    'SELECT id, name, phone, note, created_at, NULL AS balance, NULL AS last_activity_at FROM customers WHERE archived = 0',
+    'SELECT id, name, phone, note, deleted_at, created_at, NULL AS balance, NULL AS last_activity_at FROM customers WHERE archived = 0',
   );
   const entries = await db.getAllAsync<EntryRow>('SELECT * FROM entries ORDER BY created_at');
   const settingsRows = await db.getAllAsync<{ key: string; value: string }>('SELECT key, value FROM settings');
@@ -326,11 +457,12 @@ export async function exportAll(db: SQLiteDatabase): Promise<BackupData> {
     app: 'daftar',
     version: 1,
     exportedAt: new Date().toISOString(),
-    customers: customers.map(({ id, name, phone, note, created_at }) => ({
+    customers: customers.map(({ id, name, phone, note, deleted_at, created_at }) => ({
       id,
       name,
       phone,
       note,
+      deletedAt: deleted_at,
       createdAt: created_at,
     })),
     entries: entries.map(toEntry),
@@ -351,18 +483,27 @@ export async function importAll(db: SQLiteDatabase, data: BackupData): Promise<v
     await db.runAsync('DELETE FROM entries');
     await db.runAsync('DELETE FROM customers');
     for (const c of data.customers) {
-      await db.runAsync('INSERT INTO customers (id, name, phone, note, created_at) VALUES (?, ?, ?, ?, ?)', [
-        c.id,
-        c.name,
-        c.phone,
-        c.note ?? null,
-        c.createdAt,
-      ]);
+      await db.runAsync(
+        'INSERT INTO customers (id, name, phone, note, deleted_at, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+        [c.id, c.name, c.phone, c.note ?? null, c.deletedAt ?? null, c.createdAt],
+      );
     }
     for (const e of data.entries) {
       await db.runAsync(
-        'INSERT INTO entries (id, customer_id, kind, amount, method, note, credit_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [e.id, e.customerId, e.kind, e.amount, e.method, e.note, e.creditType ?? null, e.createdAt],
+        `INSERT INTO entries (id, customer_id, kind, amount, method, note, credit_type, cancelled_at, cancel_reason, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          e.id,
+          e.customerId,
+          e.kind,
+          e.amount,
+          e.method,
+          e.note,
+          e.creditType ?? null,
+          e.cancelledAt ?? null,
+          e.cancelReason ?? null,
+          e.createdAt,
+        ],
       );
     }
     for (const i of data.entryItems ?? []) {
@@ -386,5 +527,6 @@ export async function importAll(db: SQLiteDatabase, data: BackupData): Promise<v
         [key, value],
       );
     }
+    await logActivity(db, 'backup_restore', { details: data.exportedAt });
   });
 }

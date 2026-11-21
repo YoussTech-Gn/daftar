@@ -56,15 +56,67 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX IF NOT EXISTS idx_entry_items_entry ON entry_items(entry_id);
   `,
+  // v4 — trust core (decision 0013). Rebuilds `entries` to allow kind 'forgiven' (CHECK can't be altered)
+  // and adds cancellation; customers get a trash; new activity log. Runs in a transaction (see below).
+  `
+  CREATE TABLE entries_v4 (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL CHECK (kind IN ('credit', 'payment', 'forgiven')),
+    amount INTEGER NOT NULL CHECK (amount > 0),
+    method TEXT NOT NULL DEFAULT 'cash',
+    note TEXT,
+    created_at INTEGER NOT NULL,
+    credit_type TEXT,
+    cancelled_at INTEGER,
+    cancel_reason TEXT
+  );
+  INSERT INTO entries_v4 (id, customer_id, kind, amount, method, note, created_at, credit_type)
+    SELECT id, customer_id, kind, amount, method, note, created_at, credit_type FROM entries;
+  DROP TABLE entries;
+  ALTER TABLE entries_v4 RENAME TO entries;
+  CREATE INDEX IF NOT EXISTS idx_entries_customer ON entries(customer_id, created_at);
+  ALTER TABLE customers ADD COLUMN deleted_at INTEGER;
+  CREATE TABLE IF NOT EXISTS activity_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    at INTEGER NOT NULL,
+    action TEXT NOT NULL,
+    customer_id INTEGER,
+    entry_id INTEGER,
+    amount INTEGER,
+    details TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_activity_at ON activity_log(at);
+  `,
 ];
+
+/** From this version on, each migration runs in a transaction with foreign keys off (table rebuilds). */
+const FIRST_TRANSACTIONAL = 4;
 
 export async function migrate(db: SQLiteDatabase): Promise<void> {
   await db.execAsync('PRAGMA foreign_keys = ON;');
   const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
   let version = row?.user_version ?? 0;
   while (version < MIGRATIONS.length) {
-    await db.execAsync(MIGRATIONS[version]);
-    version += 1;
-    await db.execAsync(`PRAGMA user_version = ${version}`);
+    const next = version + 1;
+    if (next < FIRST_TRANSACTIONAL) {
+      await db.execAsync(MIGRATIONS[version]);
+      await db.execAsync(`PRAGMA user_version = ${next}`);
+    } else {
+      // SQLite's documented way to change a table: foreign keys off, rebuild in one transaction.
+      await db.execAsync('PRAGMA foreign_keys = OFF;');
+      try {
+        await db.execAsync('BEGIN;');
+        await db.execAsync(MIGRATIONS[version]);
+        await db.execAsync(`PRAGMA user_version = ${next};`);
+        await db.execAsync('COMMIT;');
+      } catch (error) {
+        await db.execAsync('ROLLBACK;').catch(() => undefined);
+        throw error;
+      } finally {
+        await db.execAsync('PRAGMA foreign_keys = ON;');
+      }
+    }
+    version = next;
   }
 }

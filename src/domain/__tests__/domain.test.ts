@@ -74,7 +74,7 @@ describe('buildCsv', () => {
       'GNF',
     );
     const lines = csv.replace('﻿', '').split('\n');
-    expect(lines[0]).toBe('date,customer,phone,type,amount,method,note');
-    expect(lines[1]).toBe('1970-01-01T00:00:00.000Z,"Diallo, Mamadou",,credit,5 000,cash,"riz ""25kg"""');
+    expect(lines[0]).toBe('date,customer,phone,type,amount,method,note,status');
+    expect(lines[1]).toBe('1970-01-01T00:00:00.000Z,"Diallo, Mamadou",,credit,5 000,cash,"riz ""25kg""",active');
   });
 });

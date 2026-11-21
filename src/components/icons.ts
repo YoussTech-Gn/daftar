@@ -3,16 +3,21 @@
  * Import icons from here, never emojis or text symbols, so the look stays consistent.
  */
 export {
+  ArchiveRestore,
   ArrowDown,
   ArrowUp,
   Banknote,
+  Ban,
   BookOpen,
+  CheckCheck,
   ContactRound,
   Delete,
   Eraser,
   FileSpreadsheet,
   HardDriveDownload,
   HardDriveUpload,
+  HandHeart,
+  History,
   LockKeyhole,
   LockKeyholeOpen,
   MessageCircle,
@@ -25,6 +30,7 @@ export {
   ShoppingCart,
   StickyNote,
   Trash2,
+  Undo2,
   X,
   type LucideIcon,
 } from 'lucide-react-native';

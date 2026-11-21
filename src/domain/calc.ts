@@ -31,6 +31,14 @@ export function sumExpression(expr: string, currencyCode: string): number | null
   return total;
 }
 
+/** Minor units → keypad expression, e.g. 1250000 GNF → "1250000", 1250 MAD → "12,5". */
+export function amountToExpr(minor: number, currencyCode: string): string {
+  const { decimals } = getCurrency(currencyCode);
+  const whole = Math.floor(minor / 10 ** decimals);
+  const fraction = decimals > 0 ? (minor % 10 ** decimals).toString().padStart(decimals, '0').replace(/0+$/, '') : '';
+  return fraction ? `${whole},${fraction}` : String(whole);
+}
+
 export interface PickedItem {
   name: string;
   price: number;
