@@ -1,10 +1,8 @@
-import { Alert, Linking } from 'react-native';
-
 import { buildSmsLink, buildWhatsAppLink, stripDirectionMarks } from '@/domain/reminder';
 import type { EntryKind } from '@/domain/types';
 import type { TranslationKey } from '@/i18n/translations';
 
-interface ReceiptInput {
+export interface ReceiptInput {
   t: (key: TranslationKey, values?: Record<string, string | number>) => string;
   money: (minor: number) => string;
   shopName: string;
@@ -16,13 +14,19 @@ interface ReceiptInput {
   newBalance: number;
 }
 
-/** After an entry is saved, offers to send the customer a WhatsApp receipt with the new balance. */
-export function offerReceipt(input: ReceiptInput, onDone: () => void): void {
+export interface ReceiptPayload {
+  customerName: string;
+  phone: string;
+  text: string;
+  whatsappUrl: string;
+  smsUrl: string;
+}
+
+/** Builds plain-text WhatsApp & SMS receipt URLs after saving an entry, or null if customer has no phone. */
+export function buildReceiptPayload(input: ReceiptInput): ReceiptPayload | null {
   const { t, money, customer } = input;
-  if (!customer.phone) {
-    onDone();
-    return;
-  }
+  if (!customer.phone) return null;
+
   const shop = input.shopName || t('appName');
   const amount = money(input.amount);
   const message =
@@ -37,22 +41,14 @@ export function offerReceipt(input: ReceiptInput, onDone: () => void): void {
             items: input.items ? ` (${input.items})` : '',
             balance: money(input.newBalance),
           });
-  const phone = customer.phone;
-  // Plain text for messages: invisible direction marks would make an SMS use the costly Unicode encoding.
+
+  // Plain text for messages: invisible direction marks would make an SMS use costly Unicode encoding.
   const text = stripDirectionMarks(message);
-  const open = (url: string) => {
-    Linking.openURL(url).catch(() => undefined);
-    onDone();
+  return {
+    customerName: customer.name,
+    phone: customer.phone,
+    text,
+    whatsappUrl: buildWhatsAppLink(customer.phone, text, input.countryCode),
+    smsUrl: buildSmsLink(customer.phone, text, input.countryCode),
   };
-  Alert.alert(
-    t('sendReceiptTitle'),
-    t('sendReceiptBody', { name: customer.name }),
-    [
-      { text: t('notNow'), style: 'cancel', onPress: onDone },
-      // Many customers have basic phones without WhatsApp (analysis 0002).
-      { text: t('sendSms'), onPress: () => open(buildSmsLink(phone, text, input.countryCode)) },
-      { text: t('sendWhatsApp'), onPress: () => open(buildWhatsAppLink(phone, text, input.countryCode)) },
-    ],
-    { cancelable: true, onDismiss: onDone },
-  );
 }

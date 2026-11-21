@@ -1,19 +1,38 @@
+import {
+  Manrope_400Regular,
+  Manrope_500Medium,
+  Manrope_600SemiBold,
+  Manrope_700Bold,
+  Manrope_800ExtraBold,
+} from '@expo-google-fonts/manrope';
+import {
+  ReadexPro_400Regular,
+  ReadexPro_500Medium,
+  ReadexPro_600SemiBold,
+  ReadexPro_700Bold,
+} from '@expo-google-fonts/readex-pro';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { SQLiteProvider, type SQLiteDatabase } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, View } from 'react-native';
+import { AppState, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { ExitToast } from '@/components/ui';
 import { migrate } from '@/db/migrations';
 import { purgeExpiredTrash } from '@/db/repository';
 import { LockScreen } from '@/screens/lock-screen';
 import { OnboardingScreen } from '@/screens/onboarding-screen';
 import { hasPin } from '@/security/pin';
 import { AppProvider, useApp } from '@/state/use-app';
-import { usePalette } from '@/theme';
+import { getFontFamily, ThemeProvider, useTheme } from '@/theme';
+
+SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 /** Opening any screen directly (deep link, notification) keeps Home underneath, so Back never exits. */
-export const unstable_settings = { initialRouteName: '(tabs)' };
+export const unstable_settings = { anchor: '(tabs)' };
 
 /** Migrate, then permanently remove customers that stayed in the trash over 30 days (decision 0013). */
 async function initDatabase(db: SQLiteDatabase): Promise<void> {
@@ -24,9 +43,9 @@ async function initDatabase(db: SQLiteDatabase): Promise<void> {
 /** Lock again if the app stayed in background longer than this. */
 const RELOCK_AFTER_MS = 30_000;
 
-function Gate() {
+function Gate({ fontsReady }: { fontsReady: boolean }) {
   const { ready, settings, t } = useApp();
-  const palette = usePalette();
+  const { colors, isDark } = useTheme();
   const [locked, setLocked] = useState<boolean | null>(null);
   const backgroundAt = useRef<number | null>(null);
 
@@ -43,44 +62,76 @@ function Gate() {
     return () => sub.remove();
   }, []);
 
-  if (!ready || locked === null) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.background }}>
-        <ActivityIndicator color={palette.primary} />
-      </View>
-    );
+  const appReady = fontsReady && ready && locked !== null;
+
+  useEffect(() => {
+    if (appReady) {
+      SplashScreen.hideAsync().catch(() => undefined);
+    }
+  }, [appReady]);
+
+  if (!appReady) {
+    return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
   }
-  if (!settings.onboarded) return <OnboardingScreen />;
-  if (locked) return <LockScreen onUnlock={() => setLocked(false)} />;
 
   return (
-    <Stack
-      screenOptions={{
-        headerStyle: { backgroundColor: palette.background },
-        headerTintColor: palette.text,
-        headerShadowVisible: false,
-        contentStyle: { backgroundColor: palette.background },
-      }}>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="customer/[id]" options={{ title: '' }} />
-      <Stack.Screen name="customer/form" options={{ presentation: 'modal', title: t('addCustomer') }} />
-      <Stack.Screen name="entry/new" options={{ presentation: 'modal', title: '' }} />
-      <Stack.Screen name="pick-customer" options={{ presentation: 'modal', title: t('pickCustomer') }} />
-      <Stack.Screen name="products" options={{ title: t('products') }} />
-      <Stack.Screen name="trash" options={{ title: t('trash') }} />
-      <Stack.Screen name="activity" options={{ title: t('activity') }} />
-      <Stack.Screen name="pin-setup" options={{ presentation: 'modal', title: t('security') }} />
-    </Stack>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      {!settings.onboarded ? (
+        <OnboardingScreen />
+      ) : locked ? (
+        <LockScreen onUnlock={() => setLocked(false)} />
+      ) : (
+        <Stack
+          screenOptions={{
+            headerStyle: { backgroundColor: colors.bg },
+            headerTintColor: colors.text,
+            headerTitleStyle: {
+              fontFamily: getFontFamily(settings.language, '700'),
+              fontSize: 17,
+              color: colors.text,
+            },
+            headerShadowVisible: false,
+            contentStyle: { backgroundColor: colors.bg },
+          }}>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="customer/[id]" options={{ title: '' }} />
+          <Stack.Screen name="customer/form" options={{ presentation: 'modal', title: t('addCustomer') }} />
+          <Stack.Screen name="entry/new" options={{ presentation: 'modal', title: '' }} />
+          <Stack.Screen name="pick-customer" options={{ presentation: 'modal', headerShown: false }} />
+          <Stack.Screen name="products" options={{ title: t('products') }} />
+          <Stack.Screen name="trash" options={{ title: t('trash') }} />
+          <Stack.Screen name="activity" options={{ title: t('activity') }} />
+          <Stack.Screen name="pin-setup" options={{ presentation: 'modal', title: t('security') }} />
+        </Stack>
+      )}
+      <ExitToast />
+    </View>
   );
 }
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    ReadexPro_400Regular,
+    ReadexPro_500Medium,
+    ReadexPro_600SemiBold,
+    ReadexPro_700Bold,
+    Manrope_400Regular,
+    Manrope_500Medium,
+    Manrope_600SemiBold,
+    Manrope_700Bold,
+    Manrope_800ExtraBold,
+  });
+
   return (
-    <SQLiteProvider databaseName="daftar.db" onInit={initDatabase}>
-      <AppProvider>
-        <StatusBar style="auto" />
-        <Gate />
-      </AppProvider>
-    </SQLiteProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SQLiteProvider databaseName="daftar.db" onInit={initDatabase}>
+        <AppProvider>
+          <ThemeProvider>
+            <Gate fontsReady={fontsLoaded || Boolean(fontError)} />
+          </ThemeProvider>
+        </AppProvider>
+      </SQLiteProvider>
+    </GestureHandlerRootView>
   );
 }

@@ -3,28 +3,41 @@ import { useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Alert, FlatList, Pressable, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FormField } from '@/components/form-field';
-import { ICON, Plus, Trash2 } from '@/components/icons';
-import { Button, Card, Chip, ChipRow, Row, Txt } from '@/components/ui';
+import { ICON_SCALE, Plus, Trash2 } from '@/components/icons';
+import {
+  AmountDisplay,
+  Card,
+  ChipRow,
+  ConfirmationDialog,
+  DaftarButton,
+  DaftarChip,
+  DaftarText,
+  EmptyState,
+  Row,
+} from '@/components/ui';
 import { createProduct, deleteProduct, listProducts, updateProduct } from '@/db/repository';
 import { formatAmount, getCurrency, parseAmount } from '@/domain/currency';
 import { productSchema, type ProductFormValues } from '@/domain/schemas';
 import { isFractionalUnit, PRODUCT_UNITS, type Product } from '@/domain/types';
+import { haptic } from '@/lib/haptics';
 import { useApp } from '@/state/use-app';
-import { usePalette } from '@/theme';
+import { useTheme } from '@/theme';
 
 const EMPTY: ProductFormValues = { name: '', price: '', unit: 'piece' };
 
-/** Product catalog: name, price and unit, used for quick-tap credit entry. Tap a row to edit it. */
+/** 11 · Products: Add/Edit card (name, unit chips, price, save) + product list with delete confirmation. */
 export default function ProductsScreen() {
   const db = useSQLiteContext();
-  const { t, money, settings } = useApp();
-  const palette = usePalette();
+  const { t, settings } = useApp();
+  const { colors, shadows } = useTheme();
+
   const [products, setProducts] = useState<Product[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
 
   const schema = useMemo(() => productSchema(settings.currency), [settings.currency]);
   const { control, handleSubmit, reset, formState } = useForm<ProductFormValues>({
@@ -46,14 +59,20 @@ export default function ProductsScreen() {
   }
 
   const onSubmit = handleSubmit(async (values) => {
-    const input = { name: values.name, price: parseAmount(values.price, settings.currency) ?? 0, unit: values.unit };
+    const input = {
+      name: values.name,
+      price: parseAmount(values.price, settings.currency) ?? 0,
+      unit: values.unit,
+    };
     if (editingId === null) await createProduct(db, input);
     else await updateProduct(db, editingId, input);
+    haptic.success();
     resetForm();
     load();
   });
 
   function startEdit(p: Product) {
+    haptic.selection();
     setEditingId(p.id);
     reset({
       name: p.name,
@@ -62,48 +81,44 @@ export default function ProductsScreen() {
     });
   }
 
-  function confirmDelete(p: Product) {
-    Alert.alert(p.name, undefined, [
-      { text: t('cancel'), style: 'cancel' },
-      {
-        text: t('delete'),
-        style: 'destructive',
-        onPress: async () => {
-          await deleteProduct(db, p.id);
-          if (editingId === p.id) resetForm();
-          load();
-        },
-      },
-    ]);
-  }
-
   return (
-    <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
+    <SafeAreaView edges={['bottom']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <FlatList
         data={products}
         keyExtractor={(p) => String(p.id)}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ padding: 16, gap: 8, paddingBottom: 40 }}
+        contentContainerStyle={styles.listContent}
         ListHeaderComponent={
-          <Card style={{ gap: 12, marginBottom: 8 }}>
-            <Txt muted size={14}>
+          <Card style={styles.formCard}>
+            <DaftarText role="caption" tone="muted">
               {t('productsHint')}
-            </Txt>
+            </DaftarText>
+
             <FormField control={control} name="name" label={t('productName')} placeholder="Riz" />
-            <Txt size={14} muted weight="600">
-              {t('soldBy')}
-            </Txt>
-            <Controller
-              control={control}
-              name="unit"
-              render={({ field }) => (
-                <ChipRow>
-                  {PRODUCT_UNITS.map((u) => (
-                    <Chip key={u} label={t(`unit_${u}`)} selected={field.value === u} onPress={() => field.onChange(u)} />
-                  ))}
-                </ChipRow>
-              )}
-            />
+
+            <View style={{ gap: 8 }}>
+              <DaftarText role="label" tone="secondary" weight="600">
+                {t('soldBy')}
+              </DaftarText>
+              <Controller
+                control={control}
+                name="unit"
+                render={({ field }) => (
+                  <ChipRow>
+                    {PRODUCT_UNITS.map((u) => (
+                      <DaftarChip
+                        key={u}
+                        variant="filter"
+                        label={t(`unit_${u}`)}
+                        selected={field.value === u}
+                        onPress={() => field.onChange(u)}
+                      />
+                    ))}
+                  </ChipRow>
+                )}
+              />
+            </View>
+
             <FormField
               control={control}
               name="price"
@@ -111,8 +126,9 @@ export default function ProductsScreen() {
               keyboardType="decimal-pad"
               placeholder="25000"
             />
+
             <Row gap={10}>
-              <Button
+              <DaftarButton
                 label={editingId === null ? t('addProduct') : t('save')}
                 icon={editingId === null ? Plus : undefined}
                 onPress={onSubmit}
@@ -120,31 +136,108 @@ export default function ProductsScreen() {
                 style={{ flex: 1 }}
               />
               {editingId !== null ? (
-                <Button label={t('cancel')} variant="secondary" onPress={resetForm} style={{ flex: 1 }} />
+                <DaftarButton label={t('cancel')} variant="secondary" onPress={resetForm} style={{ flex: 1 }} />
               ) : null}
             </Row>
           </Card>
         }
-        ListEmptyComponent={<Txt muted>{t('noProducts')}</Txt>}
-        renderItem={({ item }) => (
-          <Pressable onPress={() => startEdit(item)} onLongPress={() => confirmDelete(item)}>
-            <Card style={{ paddingVertical: 12, borderColor: editingId === item.id ? palette.primary : palette.border }}>
-              <Row>
-                <View style={{ flex: 1 }}>
-                  <Txt weight="700">{item.name}</Txt>
-                </View>
-                <Txt weight="700" style={{ color: palette.primary }}>
-                  {money(item.price)}
-                  {isFractionalUnit(item.unit) || item.unit === 'pack' ? ` / ${t(`unit_${item.unit}`)}` : ''}
-                </Txt>
-                <Pressable hitSlop={10} onPress={() => confirmDelete(item)} accessibilityLabel={t('delete')}>
-                  <Trash2 size={ICON.md} color={palette.muted} />
-                </Pressable>
-              </Row>
-            </Card>
-          </Pressable>
-        )}
+        ListEmptyComponent={<EmptyState variant="products" title={t('noProducts')} hint={t('productsHint')} />}
+        renderItem={({ item }) => {
+          const isEditing = editingId === item.id;
+          const unitSuffix =
+            isFractionalUnit(item.unit) || item.unit === 'pack' ? ` / ${t(`unit_${item.unit}`)}` : '';
+          return (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => startEdit(item)}
+              onLongPress={() => setDeletingProduct(item)}>
+              <View
+                style={[
+                  styles.productRow,
+                  shadows.card,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: isEditing ? colors.primary : colors.border,
+                    borderWidth: isEditing ? 1.5 : 1,
+                  },
+                ]}>
+                <Row gap={10} style={{ justifyContent: 'space-between' }}>
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <DaftarText role="body" weight="600" numberOfLines={1}>
+                      {item.name}
+                    </DaftarText>
+                    <Row gap={4}>
+                      <AmountDisplay amount={item.price} size="label" color={colors.primary} />
+                      {unitSuffix ? (
+                        <DaftarText role="caption" tone="muted">
+                          {unitSuffix}
+                        </DaftarText>
+                      ) : null}
+                    </Row>
+                  </View>
+
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t('delete')}
+                    hitSlop={8}
+                    onPress={() => {
+                      haptic.selection();
+                      setDeletingProduct(item);
+                    }}
+                    style={[styles.deleteBtn, { backgroundColor: colors.dangerSoft }]}>
+                    <Trash2 size={ICON_SCALE.sm.size} color={colors.danger} strokeWidth={ICON_SCALE.sm.strokeWidth} />
+                  </Pressable>
+                </Row>
+              </View>
+            </Pressable>
+          );
+        }}
+      />
+
+      <ConfirmationDialog
+        visible={deletingProduct !== null}
+        title={deletingProduct ? t('deleteProductTitle', { name: deletingProduct.name }) : ''}
+        body={t('deleteProductBody')}
+        confirmLabel={t('delete')}
+        tone="danger"
+        icon="trash"
+        onCancel={() => setDeletingProduct(null)}
+        onConfirm={async () => {
+          const target = deletingProduct;
+          setDeletingProduct(null);
+          if (!target) return;
+          await deleteProduct(db, target.id);
+          haptic.warning();
+          if (editingId === target.id) resetForm();
+          load();
+        }}
       />
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  listContent: {
+    padding: 16,
+    gap: 10,
+    paddingBottom: 40,
+  },
+  formCard: {
+    gap: 14,
+    marginBottom: 6,
+  },
+  productRow: {
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    minHeight: 62,
+    justifyContent: 'center',
+  },
+  deleteBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

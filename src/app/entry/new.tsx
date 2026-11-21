@@ -1,13 +1,23 @@
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CalcKeypad } from '@/components/calc-keypad';
-import { Banknote, ICON, Pencil, ShoppingCart, StickyNote } from '@/components/icons';
-import { QtySheet } from '@/components/qty-sheet';
-import { Button, Chip, ChipRow, Row, Txt } from '@/components/ui';
+import { Banknote, ICON_SCALE, Pencil, ShoppingBag, StickyNote } from '@/components/icons';
+import {
+  AmountDisplay,
+  CalculatorKeypad,
+  ChipRow,
+  DaftarButton,
+  DaftarChip,
+  DaftarInput,
+  DaftarText,
+  QuantityBottomSheet,
+  ReceiptPromptSheet,
+  Row,
+  StampSaveOverlay,
+} from '@/components/ui';
 import { addEntry, bumpProductUse, getCustomer, listProducts } from '@/db/repository';
 import {
   amountToExpr,
@@ -20,7 +30,7 @@ import {
   type CalcKey,
   type PickedItem,
 } from '@/domain/calc';
-import { getCurrency } from '@/domain/currency';
+import { formatAmount, getCurrency } from '@/domain/currency';
 import {
   isFractionalUnit,
   PAYMENT_METHODS,
@@ -31,28 +41,29 @@ import {
   type Product,
 } from '@/domain/types';
 import { haptic } from '@/lib/haptics';
-import { offerReceipt } from '@/lib/receipt';
+import { buildReceiptPayload, type ReceiptPayload } from '@/lib/receipt';
+import { useSessionStore } from '@/state/session-store';
 import { useApp } from '@/state/use-app';
-import { usePalette } from '@/theme';
+import { useTheme } from '@/theme';
 
 type Picked = PickedItem & { id: number };
 
+/** 06 · New Credit & 07 · Payment: Money/Goods segmented toggle, Goods chips, QuantityBottomSheet, Keypad, StampSaveOverlay, ReceiptPromptSheet. */
 export default function NewEntryScreen() {
   const db = useSQLiteContext();
-  const { t, settings, money, isRTL } = useApp();
-  const palette = usePalette();
+  const { t, settings, money } = useApp();
+  const { colors, shadows } = useTheme();
+  const markSavedEntry = useSessionStore((s) => s.markSavedEntry);
+
   const params = useLocalSearchParams<{ customerId: string; kind: EntryKind; settle?: string }>();
-  // "Settle all" (decision 0013): the payment screen opens pre-filled with the whole balance.
   const settle = params.settle === '1';
   const prefilled = useRef(false);
   const customerId = Number(params.customerId);
   const kind: EntryKind = params.kind === 'payment' ? 'payment' : 'credit';
-  const color = kind === 'credit' ? palette.credit : palette.payment;
   const decimals = getCurrency(settings.currency).decimals;
 
   const [customer, setCustomer] = useState<CustomerWithBalance | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
-  // Decision 0009: a cash loan is the default; goods is one tap away.
   const [creditType, setCreditType] = useState<CreditType>('cash');
   const [picked, setPicked] = useState<Picked[]>([]);
   const [qtyFor, setQtyFor] = useState<Product | null>(null);
@@ -61,6 +72,10 @@ export default function NewEntryScreen() {
   const [note, setNote] = useState('');
   const [showNote, setShowNote] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const [stampAmount, setStampAmount] = useState<number | null>(null);
+  const [pendingReceipt, setPendingReceipt] = useState<ReceiptPayload | null>(null);
+  const [activeReceipt, setActiveReceipt] = useState<ReceiptPayload | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -80,6 +95,7 @@ export default function NewEntryScreen() {
   const typed = sumExpression(expr, settings.currency);
   const total = (typed ?? 0) + itemsTotal(activeItems);
   const itemsNote = itemsToNote(activeItems);
+
   const breakdown = useMemo(() => {
     const parts: string[] = [];
     if (itemsNote) parts.push(itemsNote);
@@ -117,10 +133,10 @@ export default function NewEntryScreen() {
   }
 
   async function save() {
-    if (total <= 0 || typed === null || !customer) return;
+    if (total <= 0 || typed === null || !customer || saving) return;
     setSaving(true);
     const fullNote = [itemsNote, note.trim()].filter(Boolean).join(' — ');
-    await addEntry(db, {
+    const entryId = await addEntry(db, {
       customerId,
       kind,
       amount: total,
@@ -138,96 +154,165 @@ export default function NewEntryScreen() {
       })),
     });
     haptic.success();
+    markSavedEntry({ id: entryId, kind, customerId });
     await bumpProductUse(
       db,
       activeItems.map((p) => p.id),
     );
     const updated = await getCustomer(db, customerId);
-    offerReceipt(
-      {
-        t,
-        money,
-        shopName: settings.shopName,
-        countryCode: settings.countryCode,
-        customer,
-        kind,
-        amount: total,
-        items: itemsNote,
-        newBalance: updated?.balance ?? 0,
-      },
-      () => router.back(),
-    );
+    const receipt = buildReceiptPayload({
+      t,
+      money,
+      shopName: settings.shopName,
+      countryCode: settings.countryCode,
+      customer,
+      kind,
+      amount: total,
+      items: itemsNote,
+      newBalance: updated?.balance ?? 0,
+    });
+    setPendingReceipt(receipt);
+    setStampAmount(total);
   }
 
+  const handleStampFinish = useCallback(() => {
+    setStampAmount(null);
+    if (pendingReceipt) {
+      setActiveReceipt(pendingReceipt);
+      setPendingReceipt(null);
+    } else {
+      router.back();
+    }
+  }, [pendingReceipt]);
+
+  const handleReceiptDone = useCallback(() => {
+    setActiveReceipt(null);
+    router.back();
+  }, []);
+
+  const heroBg = kind === 'credit' ? colors.creditSoft : colors.paymentSoft;
+  const heroColor = kind === 'credit' ? colors.creditDeep : colors.paymentDeep;
+  const formattedTotal = formatAmount(total, settings.currency).replace(/ /g, '\u202F');
+
   return (
-    <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
+    <SafeAreaView edges={['bottom']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <Stack.Screen
         options={{
           title: `${kind === 'credit' ? t('gaveCredit') : t('receivedPayment')}${customer ? ` · ${customer.name}` : ''}`,
         }}
       />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 14 }} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {kind === 'credit' ? (
-          <Row gap={10}>
-            <Button
-              label={t('creditCash')}
-              icon={Banknote}
-              variant={creditType === 'cash' ? 'credit' : 'secondary'}
-              onPress={() => setCreditType('cash')}
-              style={{ flex: 1, minHeight: 46 }}
-            />
-            <Button
-              label={t('creditGoods')}
-              icon={ShoppingCart}
-              variant={creditType === 'goods' ? 'credit' : 'secondary'}
-              onPress={() => setCreditType('goods')}
-              style={{ flex: 1, minHeight: 46 }}
-            />
-          </Row>
+          <View style={[styles.segmentedTrack, { backgroundColor: colors.surfaceSunken, borderColor: colors.border }]}>
+            <Row gap={4}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ selected: creditType === 'cash' }}
+                onPress={() => {
+                  haptic.selection();
+                  setCreditType('cash');
+                }}
+                style={[
+                  styles.segment,
+                  creditType === 'cash'
+                    ? [styles.segmentActive, shadows.button, { backgroundColor: colors.surface }]
+                    : undefined,
+                ]}>
+                <Row gap={8} style={{ justifyContent: 'center' }}>
+                  <Banknote
+                    size={ICON_SCALE.sm.size}
+                    color={creditType === 'cash' ? colors.creditDeep : colors.textSecondary}
+                    strokeWidth={ICON_SCALE.sm.strokeWidth}
+                  />
+                  <DaftarText
+                    role="label"
+                    weight={creditType === 'cash' ? '700' : '500'}
+                    style={{ color: creditType === 'cash' ? colors.creditDeep : colors.textSecondary }}>
+                    {t('creditCash')}
+                  </DaftarText>
+                </Row>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ selected: creditType === 'goods' }}
+                onPress={() => {
+                  haptic.selection();
+                  setCreditType('goods');
+                }}
+                style={[
+                  styles.segment,
+                  creditType === 'goods'
+                    ? [styles.segmentActive, shadows.button, { backgroundColor: colors.surface }]
+                    : undefined,
+                ]}>
+                <Row gap={8} style={{ justifyContent: 'center' }}>
+                  <ShoppingBag
+                    size={ICON_SCALE.sm.size}
+                    color={creditType === 'goods' ? colors.creditDeep : colors.textSecondary}
+                    strokeWidth={ICON_SCALE.sm.strokeWidth}
+                  />
+                  <DaftarText
+                    role="label"
+                    weight={creditType === 'goods' ? '700' : '500'}
+                    style={{ color: creditType === 'goods' ? colors.creditDeep : colors.textSecondary }}>
+                    {t('creditGoods')}
+                  </DaftarText>
+                </Row>
+              </Pressable>
+            </Row>
+          </View>
         ) : null}
 
-        <View style={{ alignItems: 'center', gap: 2 }}>
-          <Txt size={13} muted style={{ textAlign: 'center' }}>
+        <View style={[styles.heroBox, { backgroundColor: heroBg, borderColor: colors.border }]}>
+          <DaftarText role="caption" tone="secondary" weight="600" align="center">
             {t('total')}
-          </Txt>
-          <Txt size={40} weight="800" style={{ color, textAlign: 'center' }}>
-            {money(total)}
-          </Txt>
-          <Txt size={14} muted numberOfLines={3} style={{ textAlign: 'center', minHeight: 20 }}>
+          </DaftarText>
+          <AmountDisplay amount={total} size="display" animate color={heroColor} align="center" />
+          <DaftarText role="caption" tone="secondary" numberOfLines={3} align="center" style={styles.breakdown}>
             {breakdown || (isGoods ? t('tapItemsHint') : kind === 'credit' ? t('cashHint') : '')}
-          </Txt>
+          </DaftarText>
         </View>
 
         {isGoods ? (
           <View style={{ gap: 8 }}>
             <Row style={{ justifyContent: 'space-between' }}>
-              <Txt size={14} weight="700">
+              <DaftarText role="label" weight="700">
                 {t('products')}
-              </Txt>
-              <Pressable hitSlop={10} onPress={() => router.push('/products')}>
+              </DaftarText>
+              <Pressable hitSlop={10} onPress={() => router.push('/products')} style={styles.editProductsBtn}>
                 <Row gap={6}>
-                  <Pencil size={ICON.sm} color={palette.primary} />
-                  <Txt size={14} weight="600" style={{ color: palette.primary }}>
+                  <Pencil size={ICON_SCALE.xs.size} color={colors.primary} strokeWidth={ICON_SCALE.xs.strokeWidth} />
+                  <DaftarText role="label" tone="primary" weight="600">
                     {t('editProducts')}
-                  </Txt>
+                  </DaftarText>
                 </Row>
               </Pressable>
             </Row>
             {products.length === 0 ? (
               <Pressable onPress={() => router.push('/products')}>
-                <Txt size={13} muted>
+                <DaftarText role="caption" tone="muted">
                   {t('productsHint')}
-                </Txt>
+                </DaftarText>
               </Pressable>
             ) : (
               <ChipRow>
                 {products.map((p) => {
                   const qty = qtyOf(p.id);
                   const unitLabel = isFractionalUnit(p.unit) ? `/${t(`unit_${p.unit}`)}` : '';
+                  const qtyBadge =
+                    qty > 0
+                      ? isFractionalUnit(p.unit)
+                        ? formatQty(qty)
+                        : `×${formatQty(qty)}`
+                      : undefined;
                   return (
-                    <Chip
+                    <DaftarChip
                       key={p.id}
-                      label={`${qty > 0 ? `${formatQty(qty)} × ` : ''}${p.name} · ${money(p.price)}${unitLabel}`}
+                      variant="product"
+                      label={p.name}
+                      secondaryLabel={`${formatAmount(p.price, settings.currency)}${unitLabel}`}
+                      badge={qtyBadge}
                       selected={qty > 0}
                       onPress={() => onProductPress(p)}
                       onLongPress={() => onProductLongPress(p)}
@@ -242,44 +327,47 @@ export default function NewEntryScreen() {
         {kind === 'payment' ? (
           <ChipRow>
             {PAYMENT_METHODS.map((m) => (
-              <Chip key={m} label={t(`method_${m}`)} selected={method === m} onPress={() => setMethod(m)} />
+              <DaftarChip
+                key={m}
+                variant="paymentMethod"
+                label={t(`method_${m}`)}
+                selected={method === m}
+                onPress={() => setMethod(m)}
+              />
             ))}
           </ChipRow>
         ) : null}
 
         {showNote ? (
-          <TextInput
+          <DaftarInput
             value={note}
             onChangeText={setNote}
             placeholder={t('notePlaceholder')}
-            placeholderTextColor={palette.muted}
             autoFocus
-            style={{
-              minHeight: 46,
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: palette.border,
-              backgroundColor: palette.card,
-              color: palette.text,
-              paddingHorizontal: 14,
-              fontSize: 16,
-              textAlign: isRTL ? 'right' : 'left',
-            }}
           />
         ) : (
-          <Pressable onPress={() => setShowNote(true)} hitSlop={8}>
-            <Row gap={6}>
-              <StickyNote size={ICON.sm} color={palette.primary} />
-              <Txt size={14} weight="600" style={{ color: palette.primary }}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              haptic.selection();
+              setShowNote(true);
+            }}
+            hitSlop={8}
+            style={styles.addNoteBtn}>
+            <Row gap={8}>
+              <StickyNote size={ICON_SCALE.sm.size} color={colors.primary} strokeWidth={ICON_SCALE.sm.strokeWidth} />
+              <DaftarText role="label" tone="primary" weight="600">
                 {t('addNote')}
-              </Txt>
+              </DaftarText>
             </Row>
           </Pressable>
         )}
 
-        <CalcKeypad onKey={onKey} allowDecimal={decimals > 0} />
-        <Button
-          label={`${t('save')} · ${money(total)}`}
+        <CalculatorKeypad onKey={onKey} allowDecimal={decimals > 0} />
+
+        <DaftarButton
+          label={t('save')}
+          amountText={formattedTotal}
           variant={kind}
           onPress={save}
           loading={saving}
@@ -288,7 +376,8 @@ export default function NewEntryScreen() {
       </ScrollView>
 
       {qtyFor ? (
-        <QtySheet
+        <QuantityBottomSheet
+          key={qtyFor.id}
           visible
           name={qtyFor.name}
           unit={qtyFor.unit}
@@ -304,6 +393,56 @@ export default function NewEntryScreen() {
           onClose={() => setQtyFor(null)}
         />
       ) : null}
+
+      <StampSaveOverlay
+        visible={stampAmount !== null}
+        amount={stampAmount ?? 0}
+        onFinish={handleStampFinish}
+      />
+
+      <ReceiptPromptSheet payload={activeReceipt} onDone={handleReceiptDone} />
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  scrollContent: {
+    padding: 16,
+    gap: 14,
+    paddingBottom: 28,
+  },
+  segmentedTrack: {
+    padding: 4,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  segment: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  segmentActive: {},
+  heroBox: {
+    borderRadius: 18,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    alignItems: 'center',
+    gap: 4,
+  },
+  breakdown: {
+    minHeight: 18,
+  },
+  editProductsBtn: {
+    minHeight: 32,
+    justifyContent: 'center',
+  },
+  addNoteBtn: {
+    minHeight: 36,
+    justifyContent: 'center',
+    alignSelf: 'flex-start',
+  },
+});

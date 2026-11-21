@@ -1,0 +1,168 @@
+{
+  "$schema": "https://daftar.app/schemas/design-tokens.v2.json",
+  "meta": {
+    "name": "Daftar — Indigo Atelier (Concept A Final)",
+    "version": "2.0.0",
+    "target": "React Native / Expo (Reanimated v3, Gesture Handler, Lucide, expo-haptics)",
+    "strategicOffWhite": true,
+    "pureWhiteForbidden": true
+  },
+  "color": {
+    "light": {
+      "bg": "#F2F0EB",
+      "surface": "#FAF9F6",
+      "surfaceRaised": "#FDFCF9",
+      "surfaceSunken": "#E8E4DC",
+      "text": "#151A22",
+      "textSecondary": "#434B57",
+      "textMuted": "#697280",
+      "border": "#E2DED5",
+      "borderStrong": "#C9C4B8",
+      "primary": "#1E3A5F",
+      "primarySoft": "#E6EDF5",
+      "onPrimary": "#FAF9F6",
+      "credit": "#B83B3B",
+      "creditDeep": "#962D2D",
+      "creditSoft": "#FAECEC",
+      "onCredit": "#FAF9F6",
+      "payment": "#157A4F",
+      "paymentDeep": "#10613E",
+      "paymentSoft": "#E5F4EC",
+      "onPayment": "#FAF9F6",
+      "forgiven": "#7E5A8A",
+      "forgivenSoft": "#F2ECF5",
+      "onForgiven": "#FAF9F6",
+      "cancelled": "#7B818C",
+      "cancelledSoft": "#E9E7E2",
+      "danger": "#A62B2B",
+      "dangerSoft": "#F8E9E9",
+      "onDanger": "#FAF9F6",
+      "whatsapp": "#187C68",
+      "onWhatsapp": "#FAF9F6",
+      "focus": "#1E3A5F",
+      "overlay": "rgba(21, 26, 34, 0.48)"
+    },
+    "dark": {
+      "bg": "#10131A",
+      "surface": "#181D27",
+      "surfaceRaised": "#202735",
+      "surfaceSunken": "#0B0E14",
+      "text": "#F0EFEA",
+      "textSecondary": "#BFC5D0",
+      "textMuted": "#8690A0",
+      "border": "#262E3E",
+      "borderStrong": "#384359",
+      "primary": "#6EA0DC",
+      "primarySoft": "#1B2B42",
+      "onPrimary": "#0D1726",
+      "credit": "#EC7878",
+      "creditDeep": "#F39696",
+      "creditSoft": "#331B1E",
+      "onCredit": "#240A0A",
+      "payment": "#4ADE80",
+      "paymentDeep": "#6EE7A0",
+      "paymentSoft": "#132C21",
+      "onPayment": "#062011",
+      "forgiven": "#C7A3D4",
+      "forgivenSoft": "#292030",
+      "onForgiven": "#1B1021",
+      "cancelled": "#7E8796",
+      "cancelledSoft": "#1E2430",
+      "danger": "#F07575",
+      "dangerSoft": "#331B1E",
+      "onDanger": "#240808",
+      "whatsapp": "#34C787",
+      "onWhatsapp": "#062018",
+      "focus": "#6EA0DC",
+      "overlay": "rgba(0, 0, 0, 0.68)"
+    }
+  },
+  "typography": {
+    "arabic": {
+      "family": "Readex Pro",
+      "regular": "ReadexPro_400Regular",
+      "medium": "ReadexPro_500Medium",
+      "semiBold": "ReadexPro_600SemiBold",
+      "bold": "ReadexPro_700Bold"
+    },
+    "latin": {
+      "family": "Manrope",
+      "regular": "Manrope_400Regular",
+      "medium": "Manrope_500Medium",
+      "semiBold": "Manrope_600SemiBold",
+      "bold": "Manrope_700Bold",
+      "extraBold": "Manrope_800ExtraBold"
+    },
+    "numbers": {
+      "fontVariant": ["tabular-nums"],
+      "writingDirection": "ltr"
+    },
+    "scale": {
+      "displayAmount": { "fontSize": 34, "fontSizeCompact": 28, "lineHeight": 40, "fontWeight": "700", "letterSpacing": -0.6 },
+      "title": { "fontSize": 22, "lineHeight": 28, "fontWeight": "700", "letterSpacing": -0.3 },
+      "heading": { "fontSize": 17, "lineHeight": 23, "fontWeight": "600", "letterSpacing": -0.15 },
+      "body": { "fontSize": 15, "lineHeight": 22, "fontWeight": "400", "letterSpacing": 0 },
+      "label": { "fontSize": 14, "lineHeight": 18, "fontWeight": "600", "letterSpacing": 0.1 },
+      "caption": { "fontSize": 12, "lineHeight": 16, "fontWeight": "500", "letterSpacing": 0.2 }
+    }
+  },
+  "spacing": {
+    "0": 0, "1": 4, "2": 8, "3": 12, "4": 16, "5": 20, "6": 24, "8": 32, "10": 40, "12": 48, "14": 56, "16": 64,
+    "touchTargetMin": 48,
+    "screenPaddingX": 16,
+    "tabBarHeight": 68
+  },
+  "radius": {
+    "small": 8,
+    "medium": 14,
+    "large": 20,
+    "sheet": 24,
+    "pill": 9999
+  },
+  "quietShadows": {
+    "preset": "Indigo Ambient",
+    "light": {
+      "card": { "shadowColor": "#1E3A5F", "shadowOffset": { "width": 0, "height": 6 }, "shadowOpacity": 0.06, "shadowRadius": 16, "elevation": 2, "borderWidth": 1, "borderColor": "#E2DED5" },
+      "button": { "shadowColor": "#1E3A5F", "shadowOffset": { "width": 0, "height": 3 }, "shadowOpacity": 0.05, "shadowRadius": 8, "elevation": 1 },
+      "fab": { "shadowColor": "#1E3A5F", "shadowOffset": { "width": 0, "height": 6 }, "shadowOpacity": 0.28, "shadowRadius": 14, "elevation": 5 },
+      "tabBar": { "shadowColor": "#151A22", "shadowOffset": { "width": 0, "height": -4 }, "shadowOpacity": 0.05, "shadowRadius": 16, "elevation": 4 }
+    },
+    "dark": {
+      "card": { "shadowColor": "#000000", "shadowOffset": { "width": 0, "height": 6 }, "shadowOpacity": 0.32, "shadowRadius": 18, "elevation": 2, "borderWidth": 1, "borderColor": "#262E3E" },
+      "button": { "shadowColor": "#000000", "shadowOffset": { "width": 0, "height": 3 }, "shadowOpacity": 0.26, "shadowRadius": 8, "elevation": 1 },
+      "fab": { "shadowColor": "#000000", "shadowOffset": { "width": 0, "height": 8 }, "shadowOpacity": 0.52, "shadowRadius": 18, "elevation": 5 },
+      "tabBar": { "shadowColor": "#000000", "shadowOffset": { "width": 0, "height": -4 }, "shadowOpacity": 0.36, "shadowRadius": 18, "elevation": 4 }
+    }
+  },
+  "motion": {
+    "philosophy": "Weighted Magnetic",
+    "duration": { "tap": 70, "exit": 150, "enter": 280, "amountRoll": 320, "stampSave": 340, "forgive": 420 },
+    "easing": {
+      "enter": "cubic-bezier(0.16, 1, 0.3, 1)",
+      "exit": "cubic-bezier(0.4, 0, 1, 1)",
+      "tap": "cubic-bezier(0.2, 0, 0, 1)"
+    },
+    "spring": {
+      "tabIndicator": { "damping": 22, "stiffness": 320, "mass": 0.8 },
+      "fab": { "damping": 18, "stiffness": 340, "mass": 0.75 },
+      "sheet": { "damping": 26, "stiffness": 280, "mass": 0.9 }
+    }
+  },
+  "haptics": {
+    "selection": "Haptics.selectionAsync()",
+    "light": "Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)",
+    "medium": "Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)",
+    "success": "Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)",
+    "warning": "Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)"
+  },
+  "icon": {
+    "family": "lucide-react-native",
+    "scale": {
+      "xs": { "size": 14, "strokeWidth": 2.0 },
+      "sm": { "size": 18, "strokeWidth": 1.85 },
+      "md": { "size": 22, "strokeWidth": 1.8 },
+      "lg": { "size": 26, "strokeWidth": 1.75 },
+      "xl": { "size": 32, "strokeWidth": 1.5 }
+    }
+  }
+}

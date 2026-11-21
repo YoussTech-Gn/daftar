@@ -1,88 +1,141 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
+import { useForm, useWatch } from 'react-hook-form';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FormField } from '@/components/form-field';
-import { Button, Chip, ChipRow, Txt } from '@/components/ui';
+import { Card, ChipRow, DaftarButton, DaftarChip, DaftarEmblem, DaftarText, Row } from '@/components/ui';
 import { CURRENCIES } from '@/domain/currency';
 import { shopSchema, type ShopFormValues } from '@/domain/schemas';
 import { LANGUAGES } from '@/i18n/translations';
+import { haptic } from '@/lib/haptics';
 import { useApp } from '@/state/use-app';
-import { usePalette } from '@/theme';
+import { useTheme } from '@/theme';
 
+const COUNTRY_PRESETS = ['221', '224', '223', '225', '212'];
+
+/** 14 · Onboarding (Single Screen): emblem, headline, language & currency chips, shop name, country code, Start. */
 export function OnboardingScreen() {
   const { t, settings, updateSettings } = useApp();
-  const palette = usePalette();
-  const { control, handleSubmit, formState } = useForm<ShopFormValues>({
+  const { colors } = useTheme();
+  const { control, handleSubmit, setValue, formState } = useForm<ShopFormValues>({
     resolver: zodResolver(shopSchema),
     defaultValues: { shopName: settings.shopName, countryCode: settings.countryCode },
   });
 
+  const currentCode = useWatch({ control, name: 'countryCode' });
+
   const finish = handleSubmit(async (values) => {
-    await updateSettings({ shopName: values.shopName.trim(), countryCode: values.countryCode.trim(), onboarded: true });
+    haptic.success();
+    await updateSettings({
+      shopName: values.shopName.trim(),
+      countryCode: values.countryCode.trim(),
+      onboarded: true,
+    });
   });
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: palette.background }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={{ padding: 24, gap: 22 }} keyboardShouldPersistTaps="handled">
-          <View style={{ gap: 6, marginTop: 24 }}>
-            <Txt size={34} weight="800" style={{ color: palette.primary }}>
-              {t('appName')}
-            </Txt>
-            <Txt size={22} weight="700">
-              {t('welcome')}
-            </Txt>
-            <Txt muted>{t('tagline')}</Txt>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          <View style={styles.heroHeader}>
+            <Row gap={12}>
+              <DaftarEmblem size={52} />
+              <View style={{ flex: 1, gap: 2 }}>
+                <DaftarText role="title" tone="primary" weight="700" style={{ fontSize: 28, lineHeight: 34 }}>
+                  {t('appName')}
+                </DaftarText>
+                <DaftarText role="heading" weight="700">
+                  {t('welcome')}
+                </DaftarText>
+              </View>
+            </Row>
+            <DaftarText role="body" tone="secondary">
+              {t('tagline')}
+            </DaftarText>
           </View>
 
-          <View style={{ gap: 10 }}>
-            <Txt weight="600">{t('chooseLanguage')}</Txt>
-            <ChipRow>
-              {LANGUAGES.map((l) => (
-                <Chip
-                  key={l.code}
-                  label={l.label}
-                  selected={settings.language === l.code}
-                  onPress={() => updateSettings({ language: l.code })}
-                />
-              ))}
-            </ChipRow>
-          </View>
+          <Card style={{ gap: 16 }}>
+            <View style={{ gap: 8 }}>
+              <DaftarText role="label" tone="secondary" weight="600">
+                {t('chooseLanguage')}
+              </DaftarText>
+              <ChipRow>
+                {LANGUAGES.map((l) => (
+                  <DaftarChip
+                    key={l.code}
+                    variant="filter"
+                    label={l.label}
+                    selected={settings.language === l.code}
+                    onPress={() => updateSettings({ language: l.code })}
+                  />
+                ))}
+              </ChipRow>
+            </View>
 
-          <View style={{ gap: 10 }}>
-            <Txt weight="600">{t('chooseCurrency')}</Txt>
-            <ChipRow>
-              {CURRENCIES.map((c) => (
-                <Chip
-                  key={c.code}
-                  label={c.code === c.symbol ? c.code : `${c.code} · ${c.symbol}`}
-                  selected={settings.currency === c.code}
-                  onPress={() => updateSettings({ currency: c.code })}
-                />
-              ))}
-            </ChipRow>
-          </View>
+            <View style={{ gap: 8 }}>
+              <DaftarText role="label" tone="secondary" weight="600">
+                {t('chooseCurrency')}
+              </DaftarText>
+              <ChipRow>
+                {CURRENCIES.map((c) => (
+                  <DaftarChip
+                    key={c.code}
+                    variant="filter"
+                    label={c.code === c.symbol ? c.code : `${c.code} · ${c.symbol}`}
+                    selected={settings.currency === c.code}
+                    onPress={() => updateSettings({ currency: c.code })}
+                  />
+                ))}
+              </ChipRow>
+            </View>
+          </Card>
 
-          <FormField control={control} name="shopName" label={t('shopName')} placeholder={t('shopNamePlaceholder')} />
-          <View style={{ gap: 6 }}>
-            <FormField
-              control={control}
-              name="countryCode"
-              label={t('countryCode')}
-              placeholder="224"
-              keyboardType="number-pad"
-              maxLength={4}
-            />
-            <Txt size={13} muted>
-              {t('countryCodeHint')}
-            </Txt>
-          </View>
+          <Card style={{ gap: 16 }}>
+            <FormField control={control} name="shopName" label={t('shopName')} placeholder={t('shopNamePlaceholder')} />
 
-          <Button label={t('start')} onPress={finish} loading={formState.isSubmitting} />
+            <View style={{ gap: 8 }}>
+              <FormField
+                control={control}
+                name="countryCode"
+                label={t('countryCode')}
+                prefix="+"
+                placeholder="224"
+                keyboardType="number-pad"
+                maxLength={4}
+              />
+              <ChipRow>
+                {COUNTRY_PRESETS.map((code) => (
+                  <DaftarChip
+                    key={code}
+                    variant="filter"
+                    label={`+${code}`}
+                    selected={currentCode === code}
+                    onPress={() => setValue('countryCode', code, { shouldValidate: true })}
+                  />
+                ))}
+              </ChipRow>
+              <DaftarText role="caption" tone="muted">
+                {t('countryCodeHint')}
+              </DaftarText>
+            </View>
+          </Card>
+
+          <DaftarButton label={t('start')} onPress={finish} loading={formState.isSubmitting} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  scrollContent: {
+    padding: 20,
+    gap: 18,
+    paddingBottom: 36,
+  },
+  heroHeader: {
+    gap: 10,
+    marginTop: 12,
+  },
+});

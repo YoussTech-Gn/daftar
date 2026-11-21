@@ -1,40 +1,86 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
-  ArrowDown,
-  ArrowUp,
-  Ban,
-  Banknote,
-  HandHeart,
-  ICON,
-  ShoppingCart,
+  ArrowDownLeft,
+  ArrowUpRight,
+  ICON_SCALE,
+  ShieldCheck,
   UserPlus,
   type LucideIcon,
 } from '@/components/icons';
-import { Card, Row, Txt } from '@/components/ui';
+import {
+  DaftarText,
+  EmptyState,
+  EntryRow,
+  HomeSkeleton,
+  LedgerHeroCard,
+  Row,
+} from '@/components/ui';
 import { getSummary, listRecentEntries, type RecentEntry } from '@/db/repository';
 import { dayGroup } from '@/domain/report';
 import type { Summary } from '@/domain/types';
 import { useDoubleBackToExit } from '@/lib/use-double-back';
+import { useSessionStore } from '@/state/session-store';
 import { useApp } from '@/state/use-app';
-import { usePalette, type Palette } from '@/theme';
+import { StaggerItem, usePressScale, useTheme } from '@/theme';
 
-function entryVisual(e: RecentEntry, palette: Palette): { Icon: LucideIcon; color: string; sign: string } {
-  if (e.cancelledAt) return { Icon: Ban, color: palette.muted, sign: '' };
-  if (e.kind === 'forgiven') return { Icon: HandHeart, color: palette.primary, sign: '−' };
-  if (e.kind === 'payment') return { Icon: ArrowDown, color: palette.payment, sign: '−' };
-  const Icon = e.creditType === 'cash' ? Banknote : e.creditType === 'goods' ? ShoppingCart : ArrowUp;
-  return { Icon, color: palette.credit, sign: '+' };
+function QuickActionCard({
+  label,
+  Icon,
+  iconColor,
+  iconBg,
+  onPress,
+}: {
+  label: string;
+  Icon: LucideIcon;
+  iconColor: string;
+  iconBg: string;
+  onPress: () => void;
+}) {
+  const { colors, shadows } = useTheme();
+  const { animatedStyle, onPressIn, onPressOut } = usePressScale({
+    scaleTo: 0.96,
+    opacityTo: 0.92,
+    haptic: 'light',
+  });
+
+  return (
+    <Animated.View style={[{ flex: 1 }, animatedStyle]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        onPress={onPress}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        style={[
+          styles.actionCard,
+          shadows.card,
+          { backgroundColor: colors.surface },
+        ]}>
+        <View style={[styles.actionIconBox, { backgroundColor: iconBg }]}>
+          <Icon size={ICON_SCALE.md.size} color={iconColor} strokeWidth={ICON_SCALE.md.strokeWidth} />
+        </View>
+        <DaftarText role="label" weight="600" numberOfLines={2} align="center" style={{ fontSize: 13, lineHeight: 17 }}>
+          {label}
+        </DaftarText>
+      </Pressable>
+    </Animated.View>
+  );
 }
 
-/** Home tab (analysis 0002): totals, three quick actions, recent activity grouped by day. */
+/** 01 · Home: Shop name + offline shield badge, LedgerHeroCard, 3 quick actions, grouped activity. */
 export default function HomeScreen() {
   const db = useSQLiteContext();
-  const { t, money, settings } = useApp();
-  const palette = usePalette();
+  const { t, settings } = useApp();
+  const { colors } = useTheme();
+  const lastSavedEntry = useSessionStore((s) => s.lastSavedEntry);
+  const clearSavedEntry = useSessionStore((s) => s.clearSavedEntry);
+
   const [summary, setSummary] = useState<Summary | null>(null);
   const [recent, setRecent] = useState<RecentEntry[]>([]);
   const [now, setNow] = useState(0);
@@ -51,6 +97,12 @@ export default function HomeScreen() {
     }, [db]),
   );
 
+  useEffect(() => {
+    if (!lastSavedEntry) return;
+    const timer = setTimeout(clearSavedEntry, 600);
+    return () => clearTimeout(timer);
+  }, [clearSavedEntry, lastSavedEntry]);
+
   const groups: { key: 'today' | 'yesterday' | 'earlier'; items: RecentEntry[] }[] = [];
   for (const e of recent) {
     const key = dayGroup(e.createdAt, now);
@@ -59,144 +111,158 @@ export default function HomeScreen() {
     else groups.push({ key, items: [e] });
   }
 
-  const actions: { label: string; Icon: LucideIcon; color: string; soft: string; onPress: () => void }[] = [
-    {
-      label: t('newCredit'),
-      Icon: ArrowUp,
-      color: palette.credit,
-      soft: palette.creditSoft,
-      onPress: () => router.push({ pathname: '/pick-customer', params: { kind: 'credit' } }),
-    },
-    {
-      label: t('newPayment'),
-      Icon: ArrowDown,
-      color: palette.payment,
-      soft: palette.paymentSoft,
-      onPress: () => router.push({ pathname: '/pick-customer', params: { kind: 'payment' } }),
-    },
-    {
-      label: t('addCustomer'),
-      Icon: UserPlus,
-      color: palette.primary,
-      soft: palette.paymentSoft,
-      onPress: () => router.push('/customer/form'),
-    },
-  ];
+  let flatIndex = 0;
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 32 }}>
-      <Card style={{ backgroundColor: palette.primary, borderColor: palette.primary, gap: 4 }}>
-        <Txt size={14} style={{ color: palette.primaryText, opacity: 0.85 }}>
-          {t('totalOwed')}
-        </Txt>
-        <Txt size={32} weight="800" numberOfLines={1} style={{ color: palette.primaryText }}>
-          {money(summary?.totalOwed ?? 0)}
-        </Txt>
-        <Txt size={14} style={{ color: palette.primaryText, opacity: 0.85 }}>
-          {t('customersInDebt', { count: summary?.customersInDebt ?? 0 })}
-        </Txt>
-      </Card>
-
-      <Row gap={10}>
-        <Card style={[styles.stat, { backgroundColor: palette.creditSoft, borderColor: palette.creditSoft }]}>
-          <Txt size={13} muted>
-            {t('today')} · {t('givenToday')}
-          </Txt>
-          <Txt size={18} weight="700" numberOfLines={1} style={{ color: palette.credit }}>
-            {money(summary?.creditToday ?? 0)}
-          </Txt>
-        </Card>
-        <Card style={[styles.stat, { backgroundColor: palette.paymentSoft, borderColor: palette.paymentSoft }]}>
-          <Txt size={13} muted>
-            {t('today')} · {t('receivedToday')}
-          </Txt>
-          <Txt size={18} weight="700" numberOfLines={1} style={{ color: palette.payment }}>
-            {money(summary?.paymentsToday ?? 0)}
-          </Txt>
-        </Card>
-      </Row>
-
-      <Row gap={10}>
-        {actions.map((a) => (
-          <Pressable
-            key={a.label}
-            accessibilityRole="button"
-            onPress={a.onPress}
-            style={({ pressed }) => [
-              styles.action,
-              { backgroundColor: palette.card, borderColor: palette.border, opacity: pressed ? 0.8 : 1 },
-            ]}>
-            <View style={[styles.actionIcon, { backgroundColor: a.soft }]}>
-              <a.Icon size={ICON.lg} color={a.color} strokeWidth={2.25} />
-            </View>
-            <Txt size={13} weight="700" numberOfLines={2} style={{ textAlign: 'center' }}>
-              {a.label}
-            </Txt>
-          </Pressable>
-        ))}
-      </Row>
-
-      <Txt size={18} weight="700" style={{ marginTop: 4 }}>
-        {t('recentActivity')}
-      </Txt>
-      {recent.length === 0 ? <Txt muted>{t('noRecent')}</Txt> : null}
-      {groups.map((g, gi) => (
-        <View key={`${g.key}-${gi}`} style={{ gap: 8 }}>
-          <Txt size={13} muted weight="700">
-            {t(g.key)}
-          </Txt>
-          {g.items.map((e) => {
-            const v = entryVisual(e, palette);
-            return (
-              <Pressable
-                key={e.id}
-                onPress={() => router.push({ pathname: '/customer/[id]', params: { id: String(e.customerId) } })}>
-                <Card style={{ paddingVertical: 10, opacity: e.cancelledAt ? 0.55 : 1 }}>
-                  <Row gap={12}>
-                    <v.Icon size={ICON.md} color={v.color} />
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <Txt weight="700" numberOfLines={1}>
-                        {e.customerName}
-                      </Txt>
-                      <Txt size={12} muted numberOfLines={1}>
-                        {new Date(e.createdAt).toLocaleTimeString(settings.language, {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                        {e.note ? ` · ${e.note}` : ''}
-                      </Txt>
-                    </View>
-                    <Txt
-                      weight="800"
-                      numberOfLines={1}
-                      style={{
-                        flexShrink: 0,
-                        color: v.color,
-                        textDecorationLine: e.cancelledAt ? 'line-through' : 'none',
-                      }}>
-                      {money(e.amount, v.sign)}
-                    </Txt>
-                  </Row>
-                </Card>
-              </Pressable>
-            );
-          })}
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
+      <Row style={styles.topBar} gap={10}>
+        <DaftarText role="title" weight="700" numberOfLines={1} style={{ flex: 1 }}>
+          {settings.shopName || t('appName')}
+        </DaftarText>
+        <View style={[styles.offlinePill, { backgroundColor: colors.primarySoft, borderColor: colors.border }]}>
+          <Row gap={5}>
+            <ShieldCheck size={ICON_SCALE.xs.size} color={colors.primary} strokeWidth={ICON_SCALE.xs.strokeWidth} />
+            <DaftarText role="caption" tone="primary" weight="600" numberOfLines={1}>
+              {t('offlineBadge')}
+            </DaftarText>
+          </Row>
         </View>
-      ))}
-    </ScrollView>
+      </Row>
+
+      {summary === null ? (
+        <HomeSkeleton />
+      ) : (
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <LedgerHeroCard
+            totalOwed={summary.totalOwed}
+            customersInDebt={summary.customersInDebt}
+            creditToday={summary.creditToday}
+            paymentsToday={summary.paymentsToday}
+          />
+
+          <Row gap={10} style={{ alignItems: 'stretch' }}>
+            <QuickActionCard
+              label={t('newCredit')}
+              Icon={ArrowUpRight}
+              iconColor={colors.creditDeep}
+              iconBg={colors.creditSoft}
+              onPress={() => router.push({ pathname: '/pick-customer', params: { kind: 'credit' } })}
+            />
+            <QuickActionCard
+              label={t('newPayment')}
+              Icon={ArrowDownLeft}
+              iconColor={colors.paymentDeep}
+              iconBg={colors.paymentSoft}
+              onPress={() => router.push({ pathname: '/pick-customer', params: { kind: 'payment' } })}
+            />
+            <QuickActionCard
+              label={t('addCustomer')}
+              Icon={UserPlus}
+              iconColor={colors.primary}
+              iconBg={colors.primarySoft}
+              onPress={() => router.push('/customer/form')}
+            />
+          </Row>
+
+          <View style={styles.sectionHeader}>
+            <DaftarText role="heading" weight="700">
+              {t('recentActivity')}
+            </DaftarText>
+          </View>
+
+          {recent.length === 0 ? (
+            <EmptyState variant="activity" title={t('noRecent')} hint={t('noCustomersHint')} />
+          ) : (
+            groups.map((g, gi) => (
+              <View key={`${g.key}-${gi}`} style={styles.groupBlock}>
+                <DaftarText role="caption" tone="muted" weight="600">
+                  {t(g.key)}
+                </DaftarText>
+                {g.items.map((e) => {
+                  const idx = flatIndex;
+                  flatIndex += 1;
+                  const timeStr = new Date(e.createdAt).toLocaleTimeString(settings.language, {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  });
+                  const badge =
+                    e.kind === 'payment'
+                      ? `${t('paymentEntry')} · ${t(`method_${e.method}`)}`
+                      : e.kind === 'forgiven'
+                        ? t('forgivenGrace')
+                        : undefined;
+                  const highlightMode = lastSavedEntry?.id === e.id ? lastSavedEntry.kind : null;
+
+                  return (
+                    <StaggerItem key={e.id} index={idx}>
+                      <EntryRow
+                        title={e.customerName}
+                        kind={e.kind}
+                        creditType={e.creditType}
+                        method={e.method}
+                        amount={e.amount}
+                        note={e.note}
+                        badgeLabel={badge}
+                        timestampLabel={timeStr}
+                        cancelled={e.cancelledAt != null}
+                        highlightMode={highlightMode}
+                        onPress={() =>
+                          router.push({ pathname: '/customer/[id]', params: { id: String(e.customerId) } })
+                        }
+                      />
+                    </StaggerItem>
+                  );
+                })}
+              </View>
+            ))
+          )}
+        </ScrollView>
+      )}
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  stat: { flex: 1, gap: 4, padding: 12 },
-  action: {
+  topBar: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 10,
+    justifyContent: 'space-between',
+  },
+  offlinePill: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 9999,
+    borderWidth: 1,
+    flexShrink: 0,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingTop: 6,
+    gap: 14,
+    paddingBottom: 32,
+  },
+  actionCard: {
     flex: 1,
+    minHeight: 96,
     borderRadius: 16,
-    borderWidth: StyleSheet.hairlineWidth,
     paddingVertical: 14,
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
   },
-  actionIcon: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  actionIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionHeader: {
+    marginTop: 4,
+  },
+  groupBlock: {
+    gap: 8,
+  },
 });

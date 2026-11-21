@@ -1,26 +1,114 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 
-import { Delete, ICON } from '@/components/icons';
-import { Txt } from '@/components/ui';
-import { usePalette } from '@/theme';
+import { Delete, ICON_SCALE } from '@/components/icons';
+import { DaftarText } from '@/components/ui/text';
+import { haptic } from '@/lib/haptics';
+import { useApp } from '@/state/use-app';
+import { getFontFamily, NUMERIC_TEXT_STYLE, usePressScale, useTheme } from '@/theme';
 
 const BACK = 'back';
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', BACK];
 export const PIN_LENGTH = 4;
 
-/** Numeric keypad that calls onComplete once PIN_LENGTH digits are entered. */
+function PinKey({
+  value,
+  onPress,
+}: {
+  value: string;
+  onPress: (key: string) => void;
+}) {
+  const { colors, shadows } = useTheme();
+  const { settings } = useApp();
+  const { animatedStyle, onPressIn, onPressOut } = usePressScale({
+    scaleTo: 0.94,
+    opacityTo: 0.9,
+    haptic: 'light',
+  });
+
+  if (!value) {
+    return <View style={styles.emptyKey} />;
+  }
+
+  return (
+    <Animated.View style={animatedStyle}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={value === BACK ? 'delete' : value}
+        onPress={() => onPress(value)}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        style={[
+          styles.key,
+          shadows.button,
+          {
+            backgroundColor: value === BACK ? colors.surfaceRaised : colors.surface,
+            borderColor: colors.border,
+          },
+        ]}>
+        {value === BACK ? (
+          <Delete size={ICON_SCALE.lg.size} color={colors.primary} strokeWidth={ICON_SCALE.lg.strokeWidth} />
+        ) : (
+          <Text
+            style={[
+              styles.keyLabel,
+              NUMERIC_TEXT_STYLE,
+              {
+                color: colors.text,
+                fontFamily: getFontFamily(settings.language, '600'),
+              },
+            ]}>
+            {value}
+          </Text>
+        )}
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+/**
+ * Always-LTR 3x4 PIN pad with 4 status dots and 320ms horizontal shake + warning haptic on mismatch/error.
+ */
 export function PinPad({
   title,
   error,
+  errorNonce = 0,
   onComplete,
 }: {
   title: string;
   error?: string | null;
+  errorNonce?: number;
   onComplete: (pin: string) => Promise<boolean | void> | boolean | void;
 }) {
-  const palette = usePalette();
+  const { colors } = useTheme();
+  const reducedMotion = useReducedMotion();
   const [pin, setPin] = useState('');
+  const shakeX = useSharedValue(0);
+
+  useEffect(() => {
+    if (!error || errorNonce <= 0) return;
+    haptic.warning();
+    if (reducedMotion) return;
+
+    shakeX.value = withSequence(
+      withTiming(-6, { duration: 55 }),
+      withTiming(6, { duration: 55 }),
+      withTiming(-4, { duration: 55 }),
+      withTiming(4, { duration: 55 }),
+      withTiming(0, { duration: 100 }),
+    );
+  }, [error, errorNonce, reducedMotion, shakeX]);
+
+  const dotsStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: shakeX.value }],
+  }));
 
   async function press(key: string) {
     if (key === BACK) {
@@ -36,43 +124,38 @@ export function PinPad({
     }
   }
 
+  const showErrorDots = Boolean(error && pin.length === 0);
+
   return (
     <View style={styles.container}>
-      <Txt size={20} weight="700" style={{ textAlign: 'center' }}>
+      <DaftarText role="title" weight="700" align="center">
         {title}
-      </Txt>
-      <View style={styles.dots}>
-        {Array.from({ length: PIN_LENGTH }, (_, i) => (
-          <View
-            key={i}
-            style={[
-              styles.dot,
-              { borderColor: palette.primary, backgroundColor: i < pin.length ? palette.primary : 'transparent' },
-            ]}
-          />
-        ))}
+      </DaftarText>
+
+      <Animated.View style={[styles.dots, dotsStyle]}>
+        {Array.from({ length: PIN_LENGTH }, (_, i) => {
+          const filled = i < pin.length;
+          const borderColor = showErrorDots ? colors.danger : colors.primary;
+          const backgroundColor = showErrorDots
+            ? colors.dangerSoft
+            : filled
+              ? colors.primary
+              : 'transparent';
+          return <View key={i} style={[styles.dot, { borderColor, backgroundColor }]} />;
+        })}
+      </Animated.View>
+
+      <View style={styles.errorSlot}>
+        {error ? (
+          <DaftarText role="caption" tone="danger" weight="600" align="center">
+            {error}
+          </DaftarText>
+        ) : null}
       </View>
-      <Txt size={14} style={{ color: palette.danger, textAlign: 'center', minHeight: 20 }}>
-        {error ?? ''}
-      </Txt>
+
       <View style={styles.grid}>
         {KEYS.map((key, i) => (
-          <Pressable
-            key={i}
-            accessibilityRole="button"
-            accessibilityLabel={key === BACK ? 'delete' : key}
-            disabled={!key}
-            onPress={() => press(key)}
-            style={({ pressed }) => [
-              styles.key,
-              { backgroundColor: key ? (pressed ? palette.border : palette.card) : 'transparent' },
-            ]}>
-            {key === BACK ? (
-              <Delete size={ICON.lg} color={palette.text} />
-            ) : (
-              <Text style={{ fontSize: 26, fontWeight: '600', color: palette.text }}>{key}</Text>
-            )}
-          </Pressable>
+          <PinKey key={`${key}-${i}`} value={key} onPress={press} />
         ))}
       </View>
     </View>
@@ -80,9 +163,50 @@ export function PinPad({
 }
 
 const styles = StyleSheet.create({
-  container: { alignItems: 'center', gap: 16, width: '100%' },
-  dots: { flexDirection: 'row', gap: 16, marginTop: 8 },
-  dot: { width: 16, height: 16, borderRadius: 8, borderWidth: 2 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', width: 288, gap: 12, justifyContent: 'center' },
-  key: { width: 84, height: 64, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  container: {
+    alignItems: 'center',
+    gap: 14,
+    width: '100%',
+  },
+  dots: {
+    flexDirection: 'row',
+    direction: 'ltr',
+    gap: 18,
+    marginTop: 6,
+  },
+  dot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+  },
+  errorSlot: {
+    minHeight: 22,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    direction: 'ltr',
+    width: 282,
+    gap: 12,
+    justifyContent: 'center',
+  },
+  emptyKey: {
+    width: 82,
+    height: 60,
+  },
+  key: {
+    width: 82,
+    height: 60,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  keyLabel: {
+    fontSize: 24,
+    lineHeight: 28,
+  },
 });

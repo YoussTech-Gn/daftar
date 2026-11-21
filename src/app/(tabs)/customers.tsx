@@ -1,28 +1,40 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CustomerRow, SearchBox } from '@/components/customer-row';
-import { BookOpen, ICON, UserPlus } from '@/components/icons';
-import { Chip, ChipRow, Row, Txt } from '@/components/ui';
+import { UserPlus } from '@/components/icons';
+import {
+  ChipRow,
+  CustomerRow,
+  CustomersSkeleton,
+  DaftarButton,
+  DaftarChip,
+  DaftarText,
+  EmptyState,
+  Row,
+  SearchBox,
+} from '@/components/ui';
 import { listCustomers } from '@/db/repository';
 import type { CustomerWithBalance } from '@/domain/types';
 import { useApp } from '@/state/use-app';
-import { usePalette } from '@/theme';
+import { StaggerItem, useTheme } from '@/theme';
 
 type Filter = 'all' | 'owes' | 'settled';
 
-/** Customers tab: search, filters, list, add customer. */
+/** 02 · Customers: header with live count + Add Customer CTA, search, filter chips, FlatList. */
 export default function CustomersScreen() {
   const db = useSQLiteContext();
-  const { t, isRTL } = useApp();
-  const palette = usePalette();
+  const { t } = useApp();
+  const { colors } = useTheme();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
-  const [customers, setCustomers] = useState<CustomerWithBalance[]>([]);
+  const [customers, setCustomers] = useState<CustomerWithBalance[] | null>(null);
 
-  const load = useCallback(async () => setCustomers(await listCustomers(db, search)), [db, search]);
+  const load = useCallback(async () => {
+    setCustomers(await listCustomers(db, search));
+  }, [db, search]);
 
   useFocusEffect(
     useCallback(() => {
@@ -30,75 +42,111 @@ export default function CustomersScreen() {
     }, [load]),
   );
 
-  const visible = customers.filter((c) =>
+  const visible = (customers ?? []).filter((c) =>
     filter === 'owes' ? c.balance > 0 : filter === 'settled' ? c.balance <= 0 : true,
   );
 
   return (
-    <View style={{ flex: 1 }}>
-      <FlatList
-        data={visible}
-        keyExtractor={(c) => String(c.id)}
-        contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 110 }}
-        keyboardShouldPersistTaps="handled"
-        ListHeaderComponent={
-          <View style={{ gap: 12, marginBottom: 4 }}>
-            <SearchBox value={search} onChangeText={setSearch} />
-            <ChipRow>
-              <Chip label={t('filterAll')} selected={filter === 'all'} onPress={() => setFilter('all')} />
-              <Chip label={t('filterOwes')} selected={filter === 'owes'} onPress={() => setFilter('owes')} />
-              <Chip label={t('filterSettled')} selected={filter === 'settled'} onPress={() => setFilter('settled')} />
-            </ChipRow>
-            <Txt size={13} muted>
-              {t('customersCount', { n: visible.length })}
-            </Txt>
-          </View>
-        }
-        ListEmptyComponent={
-          <View style={{ alignItems: 'center', gap: 6, paddingVertical: 48 }}>
-            <BookOpen size={ICON.xl} color={palette.primary} strokeWidth={1.75} />
-            <Txt weight="700" style={{ textAlign: 'center' }}>
-              {t('noCustomers')}
-            </Txt>
-            <Txt muted style={{ textAlign: 'center' }}>
-              {t('noCustomersHint')}
-            </Txt>
-          </View>
-        }
-        renderItem={({ item }) => <CustomerRow customer={item} />}
-      />
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => router.push('/customer/form')}
-        style={({ pressed }) => [
-          styles.fab,
-          { backgroundColor: palette.primary, opacity: pressed ? 0.85 : 1 },
-          isRTL ? { left: 20 } : { right: 20 },
-        ]}>
-        <Row gap={8}>
-          <UserPlus size={ICON.md} color={palette.primaryText} strokeWidth={2.5} />
-          <Txt weight="700" style={{ color: palette.primaryText }}>
-            {t('addCustomer')}
-          </Txt>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
+      <Row style={styles.header} gap={10}>
+        <Row gap={8} style={{ flexShrink: 1 }}>
+          <DaftarText role="title" weight="700" numberOfLines={1}>
+            {t('tabCustomers')}
+          </DaftarText>
+          {customers !== null ? (
+            <View style={[styles.countBadge, { backgroundColor: colors.primarySoft }]}>
+              <DaftarText role="caption" tone="primary" weight="700" numeric>
+                {String(visible.length)}
+              </DaftarText>
+            </View>
+          ) : null}
         </Row>
-      </Pressable>
-    </View>
+        <DaftarButton
+          label={t('addCustomer')}
+          icon={UserPlus}
+          variant="primary"
+          onPress={() => router.push('/customer/form')}
+          style={{ flexShrink: 1 }}
+        />
+      </Row>
+
+      {customers === null ? (
+        <CustomersSkeleton />
+      ) : (
+        <FlatList
+          data={visible}
+          keyExtractor={(c) => String(c.id)}
+          contentContainerStyle={styles.listContent}
+          keyboardShouldPersistTaps="handled"
+          ListHeaderComponent={
+            <View style={styles.listHeader}>
+              <SearchBox value={search} onChangeText={setSearch} />
+              <ChipRow>
+                <DaftarChip
+                  label={t('filterAll')}
+                  variant="filter"
+                  selected={filter === 'all'}
+                  onPress={() => setFilter('all')}
+                />
+                <DaftarChip
+                  label={t('filterOwes')}
+                  variant="filter"
+                  selected={filter === 'owes'}
+                  onPress={() => setFilter('owes')}
+                />
+                <DaftarChip
+                  label={t('filterSettled')}
+                  variant="filter"
+                  selected={filter === 'settled'}
+                  onPress={() => setFilter('settled')}
+                />
+              </ChipRow>
+            </View>
+          }
+          ListEmptyComponent={
+            <EmptyState
+              variant="customers"
+              title={t('noCustomers')}
+              hint={t('noCustomersHint')}
+              actionLabel={search === '' ? t('addCustomer') : undefined}
+              onAction={search === '' ? () => router.push('/customer/form') : undefined}
+            />
+          }
+          renderItem={({ item, index }) => (
+            <StaggerItem index={index}>
+              <CustomerRow customer={item} />
+            </StaggerItem>
+          )}
+        />
+      )}
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  fab: {
-    position: 'absolute',
-    bottom: 20,
-    paddingHorizontal: 20,
-    height: 52,
-    borderRadius: 26,
+  header: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 10,
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+  },
+  countBadge: {
+    minWidth: 28,
+    height: 26,
+    paddingHorizontal: 8,
+    borderRadius: 9999,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
+  },
+  listContent: {
+    padding: 16,
+    paddingTop: 4,
+    gap: 10,
+    paddingBottom: 32,
+  },
+  listHeader: {
+    gap: 12,
+    marginBottom: 4,
   },
 });
