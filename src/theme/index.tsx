@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
-import { useColorScheme, type ViewStyle } from 'react-native';
+import { useColorScheme, View, type ViewStyle } from 'react-native';
 
 import {
   DARK_COLORS,
@@ -12,6 +12,7 @@ import {
   TYPOGRAPHY,
   type ColorTokens,
 } from './tokens';
+import { v4Vars } from './v4-tokens';
 
 export interface ThemeShadows {
   card: ViewStyle;
@@ -69,7 +70,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const theme = useMemo(() => buildTheme(scheme), [scheme]);
 
-  return <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>;
+  // The V4 CSS variables wrap the whole app, so every Tailwind class resolves for the current scheme.
+  return (
+    <ThemeContext.Provider value={theme}>
+      <View style={[{ flex: 1 }, v4Vars(scheme)]}>{children}</View>
+    </ThemeContext.Provider>
+  );
 }
 
 export function useTheme(): DaftarTheme {
@@ -82,3 +88,4 @@ export function useColors(): ColorTokens {
 
 export * from './tokens';
 export * from './motion';
+export * from './v4-tokens';

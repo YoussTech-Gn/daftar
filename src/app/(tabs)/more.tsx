@@ -16,6 +16,8 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FormField } from '@/components/form-field';
+import { DOCK_SPACE } from '@/components/v4/floating-dock';
+import { Glass, Txt } from '@/components/v4/primitives';
 import {
   Check,
   ChevronLeft,
@@ -45,86 +47,12 @@ import { haptic } from '@/lib/haptics';
 import { hasPin, hasRecoveryCode, removePin } from '@/security/pin';
 import { useSessionStore } from '@/state/session-store';
 import { useApp } from '@/state/use-app';
-import { useTheme } from '@/theme';
+import { useTheme, v4 } from '@/theme';
 
 type SheetKind = 'shop' | 'language' | 'currency' | 'pin' | 'backup' | null;
 
-function GroupedCard({ children }: { children: ReactNode }) {
-  const { colors, shadows } = useTheme();
-  return (
-    <View
-      style={[
-        styles.groupCard,
-        shadows.card,
-        { backgroundColor: colors.surface },
-      ]}>
-      {children}
-    </View>
-  );
-}
-
 function Hairline() {
-  const { colors } = useTheme();
-  return <View style={[styles.hairline, { backgroundColor: colors.border }]} />;
-}
-
-function SettingsRow({
-  icon: Icon,
-  title,
-  value,
-  numericValue,
-  onPress,
-}: {
-  icon: LucideIcon;
-  title: string;
-  value?: string;
-  numericValue?: boolean;
-  onPress: () => void;
-}) {
-  const { colors } = useTheme();
-  const { isRTL } = useApp();
-  const Chevron = isRTL ? ChevronLeft : ChevronRight;
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={() => {
-        haptic.selection();
-        onPress();
-      }}
-      style={({ pressed }) => [
-        styles.rowPressable,
-        pressed ? { backgroundColor: colors.surfaceSunken } : undefined,
-      ]}>
-      <Row gap={12} style={styles.rowInner}>
-        <View style={[styles.iconBadge, { backgroundColor: colors.primarySoft }]}>
-          <Icon size={16} color={colors.primary} strokeWidth={1.85} />
-        </View>
-
-        <DaftarText
-          role="label"
-          weight="600"
-          numberOfLines={1}
-          style={{ flex: 1, color: colors.text }}>
-          {title}
-        </DaftarText>
-
-        <Row gap={6} style={{ flexShrink: 0 }}>
-          {value !== undefined && value !== '' ? (
-            <DaftarText
-              role="caption"
-              tone="muted"
-              numeric={numericValue}
-              numberOfLines={1}
-              style={styles.trailingValue}>
-              {value}
-            </DaftarText>
-          ) : null}
-          <Chevron size={16} color={colors.textMuted} strokeWidth={1.85} />
-        </Row>
-      </Row>
-    </Pressable>
-  );
+  return <View className="h-px bg-line" />;
 }
 
 function SettingsSheet({
@@ -172,10 +100,96 @@ function SettingsSheet({
   );
 }
 
-/** 04 · More / Settings: 4 clean grouped surface cards + quiet centered footer. */
+const TINTS = {
+  accent: { bg: 'bg-accent-soft', token: 'accent' },
+  payment: { bg: 'bg-payment-soft', token: 'payment' },
+  danger: { bg: 'bg-danger-soft', token: 'danger' },
+} as const;
+
+/** V4 settings group: uppercase caption + one glass card. */
+function SettingsGroup({ title, children }: { title: string; children: ReactNode }) {
+  const { isRTL } = useApp();
+  return (
+    <View className="gap-2">
+      <Txt
+        weight="700"
+        className="px-1 text-[11px] uppercase tracking-widest text-ink-3"
+        style={{ textAlign: isRTL ? 'right' : 'left' }}>
+        {title}
+      </Txt>
+      <Glass>{children}</Glass>
+    </View>
+  );
+}
+
+/** V4 settings row: 34px tinted badge, title + helpful subtitle, optional pill / badge, chevron. */
+function V4Row({
+  icon: Icon,
+  tint,
+  title,
+  subtitle,
+  pill,
+  badge,
+  onPress,
+  last,
+}: {
+  icon: LucideIcon;
+  tint: keyof typeof TINTS;
+  title: string;
+  subtitle?: string;
+  pill?: string;
+  badge?: string;
+  onPress: () => void;
+  last?: boolean;
+}) {
+  const { isRTL } = useApp();
+  const { scheme } = useTheme();
+  const Chevron = isRTL ? ChevronLeft : ChevronRight;
+  const align = isRTL ? 'right' : 'left';
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => {
+        haptic.selection();
+        onPress();
+      }}
+      className={`items-center gap-3 px-4 py-[15px] active:bg-surface-muted ${last ? '' : 'border-b border-line'} ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+      <View className={`h-[34px] w-[34px] items-center justify-center rounded-xl ${TINTS[tint].bg}`}>
+        <Icon size={17} color={v4(scheme, TINTS[tint].token)} strokeWidth={1.9} />
+      </View>
+      <View className="flex-1 gap-0.5">
+        <Txt weight="600" numberOfLines={1} style={{ textAlign: align }}>
+          {title}
+        </Txt>
+        {subtitle ? (
+          <Txt numberOfLines={1} className="text-xs text-ink-2" style={{ textAlign: align }}>
+            {subtitle}
+          </Txt>
+        ) : null}
+      </View>
+      {pill ? (
+        <View className="rounded-full bg-payment-soft px-2.5 py-1">
+          <Txt weight="700" className="text-[11px] text-payment">
+            {pill}
+          </Txt>
+        </View>
+      ) : null}
+      {badge ? (
+        <View className="min-w-[24px] items-center rounded-full bg-danger-soft px-2 py-0.5">
+          <Txt weight="700" numeric className="text-xs text-danger">
+            {badge}
+          </Txt>
+        </View>
+      ) : null}
+      <Chevron size={16} color={v4(scheme, 'text-muted')} strokeWidth={1.9} />
+    </Pressable>
+  );
+}
+
+/** 04 · Plus (V4, decision 0018): identity card, BOUTIQUE and SECURITE & DONNEES groups, isolated trash. */
 export default function MoreScreen() {
   const db = useSQLiteContext();
-  const { t, settings, updateSettings } = useApp();
+  const { t, settings, updateSettings, isRTL } = useApp();
   const { colors } = useTheme();
   const showToast = useSessionStore((s) => s.showToast);
 
@@ -234,100 +248,114 @@ export default function MoreScreen() {
     settings.currency === 'XOF' || settings.currency === 'XAF' ? 'FCFA' : settings.currency;
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
 
+  const languageLabel = LANGUAGES.find((l) => l.code === settings.language)?.label ?? settings.language;
+  const dir = isRTL ? 'flex-row-reverse' : 'flex-row';
+  const align = isRTL ? 'right' : 'left';
+
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <View style={styles.header}>
-        <DaftarText role="title" weight="700">
+    <SafeAreaView edges={['top']} className="flex-1 bg-bg">
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: DOCK_SPACE, gap: 20 }}
+        keyboardShouldPersistTaps="handled">
+        <Txt weight="700" className="text-2xl" style={{ textAlign: align }}>
           {t('tabMore')}
-        </DaftarText>
-      </View>
+        </Txt>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        {/* Card 1: Products & prices */}
-        <GroupedCard>
-          <SettingsRow
-            icon={ShoppingBasket}
-            title={t('products')}
-            value={String(productCount)}
-            numericValue
-            onPress={() => router.push('/products')}
-          />
-        </GroupedCard>
-
-        {/* Card 2: Shop name, Language, Currency */}
-        <GroupedCard>
-          <SettingsRow
-            icon={Store}
-            title={settings.shopName || t('shopName')}
-            value={settings.countryCode ? `+${settings.countryCode}` : undefined}
-            numericValue
+        {/* Store identity card */}
+        <Glass className={`items-center gap-3 p-4 ${dir}`}>
+          <View className="h-12 w-12 items-center justify-center rounded-2xl bg-accent">
+            <Store size={22} color={colors.onPrimary} strokeWidth={2} />
+          </View>
+          <View className="flex-1 gap-0.5">
+            <Txt weight="700" numberOfLines={1} className="text-base" style={{ textAlign: align }}>
+              {settings.shopName || t('shopName')}
+            </Txt>
+            <Txt numberOfLines={1} className="text-xs text-ink-2" style={{ textAlign: align }}>
+              {settings.countryCode ? `+${settings.countryCode} · ` : ''}
+              {t('dataOnDevice')}
+            </Txt>
+          </View>
+          <Pressable
+            accessibilityRole="button"
             onPress={() => {
+              haptic.selection();
               reset({ shopName: settings.shopName, countryCode: settings.countryCode });
               setSheet('shop');
             }}
-          />
-          <Hairline />
-          <SettingsRow
-            icon={Languages}
-            title={t('chooseLanguage')}
-            value={settings.language.toUpperCase()}
-            onPress={() => setSheet('language')}
-          />
-          <Hairline />
-          <SettingsRow
-            icon={Coins}
-            title={t('chooseCurrency')}
-            value={currencyDisplay}
-            onPress={() => setSheet('currency')}
-          />
-        </GroupedCard>
+            className="min-h-[36px] justify-center rounded-full bg-accent-soft px-4">
+            <Txt weight="700" className="text-xs text-accent">
+              {t('edit')}
+            </Txt>
+          </Pressable>
+        </Glass>
 
-        {/* Card 3: PIN Security */}
-        <GroupedCard>
-          <SettingsRow
+        <SettingsGroup title={t('groupShop')}>
+          <V4Row
+            icon={ShoppingBasket}
+            tint="accent"
+            title={t('products')}
+            subtitle={t('productsSaved', { n: productCount })}
+            onPress={() => router.push('/products')}
+          />
+          <V4Row
+            icon={Languages}
+            tint="accent"
+            title={t('languageAndCurrency')}
+            subtitle={`${languageLabel} · ${currencyDisplay}`}
+            onPress={() => setSheet('language')}
+            last
+          />
+        </SettingsGroup>
+
+        <SettingsGroup title={t('groupSecurityData')}>
+          <V4Row
             icon={Lock}
-            title={t('security')}
-            value={pinOn ? t('pinOnShort') : t('pinOffShort')}
+            tint="payment"
+            title={t('securityAndRecovery')}
+            subtitle={pinOn ? (recoveryOn ? t('pinActive') : t('recoveryMissingShort')) : t('pinOffLong')}
+            pill={pinOn ? t('pinOnShort') : undefined}
             onPress={() => {
               if (pinOn) setSheet('pin');
               else router.push('/pin-setup');
             }}
           />
-        </GroupedCard>
-
-        {/* Card 4: Export CSV, Backup & restore, Activity log, Trash */}
-        <GroupedCard>
-          <SettingsRow
-            icon={FileSpreadsheet}
-            title={t('exportCsv')}
-            onPress={() => run(() => shareCsv(db, settings.currency))}
-          />
-          <Hairline />
-          <SettingsRow
+          <V4Row
             icon={HardDriveDownload}
+            tint="accent"
             title={t('backupAndRestore')}
+            subtitle={t('backupSubtitle')}
             onPress={() => setSheet('backup')}
           />
-          <Hairline />
-          <SettingsRow
+          <V4Row
+            icon={FileSpreadsheet}
+            tint="accent"
+            title={t('exportCsv')}
+            subtitle={t('csvSubtitle')}
+            onPress={() => run(() => shareCsv(db, settings.currency))}
+          />
+          <V4Row
             icon={History}
+            tint="accent"
             title={t('activity')}
+            subtitle={t('activitySubtitle')}
             onPress={() => router.push('/activity')}
+            last
           />
-          <Hairline />
-          <SettingsRow
-            icon={Trash2}
-            title={t('trash')}
-            value={String(trashCount)}
-            numericValue
-            onPress={() => router.push('/trash')}
-          />
-        </GroupedCard>
+        </SettingsGroup>
 
-        {/* Quiet centered caption footer */}
-        <DaftarText role="caption" tone="muted" align="center" style={styles.footerCaption}>
-          {t('settingsFooter', { version: appVersion })}
-        </DaftarText>
+        <Glass>
+          <V4Row
+            icon={Trash2}
+            tint="danger"
+            title={t('trash')}
+            subtitle={t('trashSubtitle')}
+            badge={trashCount > 0 ? String(trashCount) : undefined}
+            onPress={() => router.push('/trash')}
+            last
+          />
+        </Glass>
+
+        <Txt className="text-center text-xs text-ink-3">{t('settingsFooter', { version: appVersion })}</Txt>
       </ScrollView>
 
       {/* Shop name & country code sheet */}
@@ -379,6 +407,12 @@ export default function MoreScreen() {
             );
           })}
         </View>
+        <DaftarButton
+          label={`${t('chooseCurrency')} · ${currencyDisplay}`}
+          icon={Coins}
+          variant="secondary"
+          onPress={() => setSheet('currency')}
+        />
       </SettingsSheet>
 
       {/* Currency selector sheet */}

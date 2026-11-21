@@ -1,295 +1,165 @@
-import { router, useFocusEffect } from 'expo-router';
+import { router } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import { useCallback, useMemo, useState } from 'react';
+import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import {
-  ArrowDownLeft,
-  ArrowUpRight,
-  Eye,
-  EyeOff,
-  ICON_SCALE,
-  ShieldCheck,
-  UserPlus,
-  type LucideIcon,
-} from '@/components/icons';
-import {
-  DaftarText,
-  EmptyState,
-  EntryRow,
-  HomeSkeleton,
-  LedgerHeroCard,
-  Row,
-} from '@/components/ui';
-import { getSummary, listRecentEntries, type RecentEntry } from '@/db/repository';
-import { dayGroup } from '@/domain/report';
+import { AmountDisplay } from '@/components/ui';
+import { DOCK_SPACE } from '@/components/v4/floating-dock';
+import { ActivityRow, PrivacyEye } from '@/components/v4/ledger-bits';
+import { Glass, Pill, Txt } from '@/components/v4/primitives';
+import { getPeriodReport, getSummary, listRecentEntries, type RecentEntry } from '@/db/repository';
+import { collectedRatio, monthRange } from '@/domain/report';
 import type { Summary } from '@/domain/types';
 import { haptic } from '@/lib/haptics';
 import { useDoubleBackToExit } from '@/lib/use-double-back';
-import { useSessionStore } from '@/state/session-store';
 import { useApp } from '@/state/use-app';
-import { StaggerItem, usePressScale, useTheme } from '@/theme';
+import { useLedgerReload } from '@/state/use-ledger-reload';
+import { useTheme } from '@/theme';
 
-function QuickActionCard({
-  label,
-  Icon,
-  iconColor,
-  iconBg,
-  onPress,
-}: {
-  label: string;
-  Icon: LucideIcon;
-  iconColor: string;
-  iconBg: string;
-  onPress: () => void;
-}) {
-  const { colors, shadows } = useTheme();
-  const { animatedStyle, onPressIn, onPressOut } = usePressScale({
-    scaleTo: 0.96,
-    opacityTo: 0.92,
-    haptic: 'light',
-  });
-
+function initials(name: string): string {
   return (
-    <Animated.View style={[{ flex: 1 }, animatedStyle]}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={label}
-        onPress={onPress}
-        onPressIn={onPressIn}
-        onPressOut={onPressOut}
-        style={[
-          styles.actionCard,
-          shadows.card,
-          { backgroundColor: colors.surface },
-        ]}>
-        <View style={[styles.actionIconBox, { backgroundColor: iconBg }]}>
-          <Icon size={ICON_SCALE.md.size} color={iconColor} strokeWidth={ICON_SCALE.md.strokeWidth} />
-        </View>
-        <DaftarText role="label" weight="600" numberOfLines={2} align="center" style={{ fontSize: 13, lineHeight: 17 }}>
-          {label}
-        </DaftarText>
-      </Pressable>
-    </Animated.View>
+    name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase() ?? '')
+      .join('') || 'D'
   );
 }
 
-/** 01 · Home: Shop name + offline shield badge, LedgerHeroCard, 3 quick actions, grouped activity. */
+/** 01 · Accueil (V4, decision 0018): store bar, glass hero with inline privacy eye, unified activity panel. */
 export default function HomeScreen() {
   const db = useSQLiteContext();
-  const { t, settings } = useApp();
+  const { t, settings, isRTL } = useApp();
   const { colors } = useTheme();
-  const lastSavedEntry = useSessionStore((s) => s.lastSavedEntry);
-  const clearSavedEntry = useSessionStore((s) => s.clearSavedEntry);
-  const amountsHidden = useSessionStore((s) => s.amountsHidden);
-  const toggleAmountsHidden = useSessionStore((s) => s.toggleAmountsHidden);
 
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [ratio, setRatio] = useState(0);
   const [recent, setRecent] = useState<RecentEntry[]>([]);
-  const [now, setNow] = useState(0);
+  const [hideCancelled, setHideCancelled] = useState(false);
 
   useDoubleBackToExit(t('pressBackAgain'));
 
-  useFocusEffect(
-    useCallback(() => {
-      Promise.all([getSummary(db), listRecentEntries(db, 15)]).then(([s, r]) => {
-        setSummary(s);
-        setRecent(r);
-        setNow(Date.now());
-      });
-    }, [db]),
-  );
+  const load = useCallback(async () => {
+    const [from, to] = monthRange();
+    const [s, r, report] = await Promise.all([getSummary(db), listRecentEntries(db, 20), getPeriodReport(db, from, to)]);
+    setSummary(s);
+    setRecent(r);
+    setRatio(collectedRatio(report.totalCollected, report.outstanding));
+  }, [db]);
+  useLedgerReload(load);
 
-  useEffect(() => {
-    if (!lastSavedEntry) return;
-    const timer = setTimeout(clearSavedEntry, 600);
-    return () => clearTimeout(timer);
-  }, [clearSavedEntry, lastSavedEntry]);
+  // Active entries first (newest first), cancelled ones moved to the bottom.
+  const rows = useMemo(() => {
+    const active = recent.filter((e) => e.cancelledAt === null);
+    const cancelled = recent.filter((e) => e.cancelledAt !== null);
+    return hideCancelled ? active : [...active, ...cancelled];
+  }, [recent, hideCancelled]);
+  const cancelledCount = recent.length - recent.filter((e) => e.cancelledAt === null).length;
 
-  const groups: { key: 'today' | 'yesterday' | 'earlier'; items: RecentEntry[] }[] = [];
-  for (const e of recent) {
-    const key = dayGroup(e.createdAt, now);
-    const last = groups[groups.length - 1];
-    if (last && last.key === key) last.items.push(e);
-    else groups.push({ key, items: [e] });
-  }
-
-  let flatIndex = 0;
+  const shop = settings.shopName || t('appName');
+  const dir = isRTL ? 'flex-row-reverse' : 'flex-row';
 
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <Row style={styles.topBar} gap={10}>
-        <DaftarText role="title" weight="700" numberOfLines={1} style={{ flex: 1 }}>
-          {settings.shopName || t('appName')}
-        </DaftarText>
-        <View style={[styles.offlinePill, { backgroundColor: colors.primarySoft, borderColor: colors.border }]}>
-          <Row gap={5}>
-            <ShieldCheck size={ICON_SCALE.xs.size} color={colors.primary} strokeWidth={ICON_SCALE.xs.strokeWidth} />
-            <DaftarText role="caption" tone="primary" weight="600" numberOfLines={1}>
-              {t('offlineBadge')}
-            </DaftarText>
-          </Row>
-        </View>
-        <Pressable
-          accessibilityRole="switch"
-          accessibilityState={{ checked: amountsHidden }}
-          accessibilityLabel={amountsHidden ? t('showAmounts') : t('hideAmounts')}
-          onPress={() => {
-            haptic.selection();
-            toggleAmountsHidden();
-          }}
-          style={[styles.eyeBtn, { backgroundColor: amountsHidden ? colors.primarySoft : 'transparent' }]}>
-          {amountsHidden ? (
-            <EyeOff size={ICON_SCALE.md.size} color={colors.primary} strokeWidth={ICON_SCALE.md.strokeWidth} />
-          ) : (
-            <Eye size={ICON_SCALE.md.size} color={colors.textSecondary} strokeWidth={ICON_SCALE.md.strokeWidth} />
-          )}
-        </Pressable>
-      </Row>
-
-      {summary === null ? (
-        <HomeSkeleton />
-      ) : (
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <LedgerHeroCard
-            totalOwed={summary.totalOwed}
-            customersInDebt={summary.customersInDebt}
-            creditToday={summary.creditToday}
-            paymentsToday={summary.paymentsToday}
-          />
-
-          <Row gap={10} style={{ alignItems: 'stretch' }}>
-            <QuickActionCard
-              label={t('newCredit')}
-              Icon={ArrowUpRight}
-              iconColor={colors.creditDeep}
-              iconBg={colors.creditSoft}
-              onPress={() => router.push({ pathname: '/pick-customer', params: { kind: 'credit' } })}
-            />
-            <QuickActionCard
-              label={t('newPayment')}
-              Icon={ArrowDownLeft}
-              iconColor={colors.paymentDeep}
-              iconBg={colors.paymentSoft}
-              onPress={() => router.push({ pathname: '/pick-customer', params: { kind: 'payment' } })}
-            />
-            <QuickActionCard
-              label={t('addCustomer')}
-              Icon={UserPlus}
-              iconColor={colors.primary}
-              iconBg={colors.primarySoft}
-              onPress={() => router.push('/customer/form')}
-            />
-          </Row>
-
-          <View style={styles.sectionHeader}>
-            <DaftarText role="heading" weight="700">
-              {t('recentActivity')}
-            </DaftarText>
+    <SafeAreaView edges={['top']} className="flex-1 bg-bg">
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: DOCK_SPACE, gap: 16 }}>
+        {/* Top bar: store badge, name, live offline dot, debtor chip */}
+        <View className={`items-center gap-3 ${dir}`}>
+          <View className="h-11 w-11 items-center justify-center rounded-2xl bg-accent">
+            <Txt weight="800" className="text-base text-surface-solid">
+              {initials(shop)}
+            </Txt>
           </View>
+          <View className="flex-1 gap-0.5">
+            <Txt weight="700" numberOfLines={1} className="text-lg" style={{ textAlign: isRTL ? 'right' : 'left' }}>
+              {shop}
+            </Txt>
+            <View className={`items-center gap-1.5 ${dir}`}>
+              <View className="h-2 w-2 rounded-full bg-payment" />
+              <Txt className="text-xs text-ink-2">{t('offlineBadge')}</Txt>
+            </View>
+          </View>
+          {summary && summary.customersInDebt > 0 ? (
+            <Pill
+              label={t('customersInDebt', { count: summary.customersInDebt })}
+              className="bg-credit-soft"
+              textClassName="text-credit"
+            />
+          ) : null}
+        </View>
 
-          {recent.length === 0 ? (
-            <EmptyState variant="activity" title={t('noRecent')} hint={t('noCustomersHint')} />
+        {/* Hero */}
+        <Glass className="gap-4 p-5">
+          <View className={`items-center justify-between ${dir}`}>
+            <Txt weight="600" className="text-sm text-ink-2">
+              {t('totalOwed')}
+            </Txt>
+            <Pill
+              label={t('recoveredPill', { pct: Math.round(ratio * 100) })}
+              className="bg-payment-soft"
+              textClassName="text-payment"
+            />
+          </View>
+          <View className={`items-center gap-3 ${dir}`}>
+            <View className="flex-1">
+              <AmountDisplay amount={summary?.totalOwed ?? 0} size="display" animate color={colors.text} align={isRTL ? 'right' : 'left'} />
+            </View>
+            <PrivacyEye />
+          </View>
+          <View className="h-px bg-line" />
+          <View className={`gap-4 ${dir}`}>
+            <View className="flex-1 gap-1">
+              <Txt weight="600" className="text-xs text-credit">
+                {t('creditsToday')}
+              </Txt>
+              <AmountDisplay amount={summary?.creditToday ?? 0} size="heading" color={colors.creditDeep} />
+            </View>
+            <View className="w-px bg-line" />
+            <View className="flex-1 gap-1">
+              <Txt weight="600" className="text-xs text-payment">
+                {t('receivedToday2')}
+              </Txt>
+              <AmountDisplay amount={summary?.paymentsToday ?? 0} size="heading" color={colors.paymentDeep} />
+            </View>
+          </View>
+        </Glass>
+
+        {/* Unified activity panel */}
+        <Glass>
+          <View className={`items-center justify-between px-4 pb-2 pt-4 ${dir}`}>
+            <Txt weight="700" className="text-base">
+              {t('recentActivity')}
+            </Txt>
+            {cancelledCount > 0 ? (
+              <Pressable
+                accessibilityRole="switch"
+                accessibilityState={{ checked: hideCancelled }}
+                onPress={() => {
+                  haptic.selection();
+                  setHideCancelled((v) => !v);
+                }}
+                className={`min-h-[36px] justify-center rounded-full px-3 ${hideCancelled ? 'bg-accent-soft' : 'bg-surface-muted'}`}>
+                <Txt weight="600" className={`text-xs ${hideCancelled ? 'text-accent' : 'text-ink-2'}`}>
+                  {hideCancelled ? t('showCancelled') : t('hideCancelled')}
+                </Txt>
+              </Pressable>
+            ) : null}
+          </View>
+          {rows.length === 0 ? (
+            <Txt className="px-4 pb-5 pt-2 text-sm text-ink-2">{t('noRecent')}</Txt>
           ) : (
-            groups.map((g, gi) => (
-              <View key={`${g.key}-${gi}`} style={styles.groupBlock}>
-                <DaftarText role="caption" tone="muted" weight="600">
-                  {t(g.key)}
-                </DaftarText>
-                {g.items.map((e) => {
-                  const idx = flatIndex;
-                  flatIndex += 1;
-                  const timeStr = new Date(e.createdAt).toLocaleTimeString(settings.language, {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  });
-                  const badge =
-                    e.kind === 'payment'
-                      ? `${t('paymentEntry')} · ${t(`method_${e.method}`)}`
-                      : e.kind === 'forgiven'
-                        ? t('forgivenGrace')
-                        : undefined;
-                  const highlightMode = lastSavedEntry?.id === e.id ? lastSavedEntry.kind : null;
-
-                  return (
-                    <StaggerItem key={e.id} index={idx}>
-                      <EntryRow
-                        title={e.customerName}
-                        kind={e.kind}
-                        creditType={e.creditType}
-                        method={e.method}
-                        amount={e.amount}
-                        note={e.note}
-                        badgeLabel={badge}
-                        timestampLabel={timeStr}
-                        cancelled={e.cancelledAt != null}
-                        highlightMode={highlightMode}
-                        onPress={() =>
-                          router.push({ pathname: '/customer/[id]', params: { id: String(e.customerId) } })
-                        }
-                      />
-                    </StaggerItem>
-                  );
-                })}
-              </View>
+            rows.map((e, i) => (
+              <ActivityRow
+                key={e.id}
+                entry={e}
+                last={i === rows.length - 1}
+                onPress={() => router.push({ pathname: '/customer/[id]', params: { id: String(e.customerId) } })}
+              />
             ))
           )}
-        </ScrollView>
-      )}
+        </Glass>
+      </ScrollView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  topBar: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 10,
-    justifyContent: 'space-between',
-  },
-  eyeBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  offlinePill: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 9999,
-    borderWidth: 1,
-    flexShrink: 0,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingTop: 6,
-    gap: 14,
-    paddingBottom: 32,
-  },
-  actionCard: {
-    flex: 1,
-    minHeight: 96,
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  actionIconBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sectionHeader: {
-    marginTop: 4,
-  },
-  groupBlock: {
-    gap: 8,
-  },
-});

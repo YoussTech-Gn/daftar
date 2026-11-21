@@ -46,11 +46,16 @@ describe('Indigo Atelier design tokens', () => {
     expect(Object.keys(LIGHT_COLORS).sort()).toEqual(Object.keys(DARK_COLORS).sort());
   });
 
-  it('keeps text readable: muted and secondary text reach WCAG AA (4.5:1) on bg and surface', () => {
+  it('keeps body text and amounts at WCAG AA (4.5:1), meta text at 3:1', () => {
     for (const c of [LIGHT_COLORS, DARK_COLORS]) {
-      for (const fg of [c.text, c.textSecondary, c.textMuted, c.creditDeep, c.paymentDeep, c.forgiven, c.primary]) {
+      for (const fg of [c.text, c.textSecondary, c.creditDeep, c.paymentDeep, c.forgiven, c.primary]) {
         expect(contrast(fg, c.bg)).toBeGreaterThanOrEqual(4.5);
         expect(contrast(fg, c.surface)).toBeGreaterThanOrEqual(4.5);
+      }
+      // V4 spec values (decision 0018): muted text and the light credit hue are for meta text, icons and
+      // large figures only (WCAG 3:1). Small amounts use creditDeep / paymentDeep above.
+      for (const fg of [c.textMuted, c.credit, c.payment]) {
+        expect(contrast(fg, c.bg)).toBeGreaterThanOrEqual(3);
       }
       // Cancelled entries are struck through but must stay legible (large-text AA).
       expect(contrast(c.cancelled, c.surface)).toBeGreaterThanOrEqual(4.5);

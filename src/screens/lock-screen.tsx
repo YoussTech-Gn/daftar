@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ICON_SCALE, KeyRound, LockKeyhole } from '@/components/icons';
+import { Fingerprint, ICON_SCALE, KeyRound } from '@/components/icons';
 import { PinPad } from '@/components/pin-pad';
 import { PinSetupFlow } from '@/components/pin-setup-flow';
 import { DaftarButton, DaftarInput, DaftarText } from '@/components/ui';
 import { haptic } from '@/lib/haptics';
+import { Txt } from '@/components/v4/primitives';
+import { canUseBiometrics, unlockWithBiometrics } from '@/security/biometric';
 import { hasRecoveryCode, verifyPin, verifyRecoveryCode } from '@/security/pin';
 import { useApp } from '@/state/use-app';
 import { useTheme } from '@/theme';
@@ -25,6 +27,19 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
   const [errorNonce, setErrorNonce] = useState(0);
   const [code, setCode] = useState('');
   const [checking, setChecking] = useState(false);
+  const [biometrics, setBiometrics] = useState(false);
+
+  useEffect(() => {
+    canUseBiometrics().then(setBiometrics);
+  }, []);
+
+  async function biometricUnlock() {
+    haptic.selection();
+    if (await unlockWithBiometrics(t('biometricPrompt'), t('cancel'))) {
+      haptic.success();
+      onUnlock();
+    }
+  }
 
   async function openRecovery() {
     haptic.selection();
@@ -56,18 +71,30 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
     );
   }
 
+  const shop = settings.shopName || t('appName');
+  const crest =
+    shop
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase() ?? '')
+      .join('') || 'D';
+
+  // V4 store crest (decision 0018): the shop's initials, or a key while recovering.
   const header = (
-    <View style={styles.brandHeader}>
-      <View style={[styles.lockMedallion, { backgroundColor: colors.primarySoft }]}>
+    <View className="items-center gap-3">
+      <View className="h-16 w-16 items-center justify-center rounded-[22px] bg-accent">
         {mode === 'pin' ? (
-          <LockKeyhole size={ICON_SCALE.lg.size} color={colors.primary} strokeWidth={ICON_SCALE.lg.strokeWidth} />
+          <Txt weight="800" className="text-2xl text-surface-solid">
+            {crest}
+          </Txt>
         ) : (
-          <KeyRound size={ICON_SCALE.lg.size} color={colors.primary} strokeWidth={ICON_SCALE.lg.strokeWidth} />
+          <KeyRound size={ICON_SCALE.lg.size} color={colors.onPrimary} strokeWidth={ICON_SCALE.lg.strokeWidth} />
         )}
       </View>
-      <DaftarText role="title" tone="primary" weight="700" align="center" style={{ fontSize: 24, lineHeight: 30 }}>
-        {settings.shopName || t('appName')}
-      </DaftarText>
+      <Txt weight="700" className="text-center text-xl">
+        {shop}
+      </Txt>
     </View>
   );
 
@@ -89,6 +116,15 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
             setErrorNonce((n) => n + 1);
           }}
         />
+        {biometrics ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('biometricPrompt')}
+            onPress={biometricUnlock}
+            className="h-14 w-14 items-center justify-center rounded-full border border-line bg-surface active:bg-surface-muted">
+            <Fingerprint size={26} color={colors.primary} strokeWidth={1.9} />
+          </Pressable>
+        ) : null}
         <Pressable accessibilityRole="button" onPress={openRecovery} style={styles.linkBtn}>
           <DaftarText role="label" tone="primary" weight="600">
             {t('forgotPin')}
@@ -173,17 +209,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
     gap: 24,
-  },
-  brandHeader: {
-    alignItems: 'center',
-    gap: 12,
-  },
-  lockMedallion: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   form: {
     width: '100%',

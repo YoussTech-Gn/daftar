@@ -1,80 +1,80 @@
 {
   "$schema": "https://daftar.app/schemas/design-tokens.v2.json",
   "meta": {
-    "name": "Daftar — Indigo Atelier (Concept A Final)",
-    "version": "2.0.0",
+    "name": "Daftar — V4 Équilibre Visuel",
+    "version": "4.0.0",
     "target": "React Native / Expo (Reanimated v3, Gesture Handler, Lucide, expo-haptics)",
     "strategicOffWhite": true,
     "pureWhiteForbidden": true
   },
   "color": {
     "light": {
-      "bg": "#F2F0EB",
-      "surface": "#FAF9F6",
-      "surfaceRaised": "#FDFCF9",
-      "surfaceSunken": "#E8E4DC",
-      "text": "#151A22",
-      "textSecondary": "#434B57",
-      "textMuted": "#5E6673",
-      "border": "#D3CDC0",
-      "borderStrong": "#C9C4B8",
+      "bg": "#F4F5F7",
+      "surface": "#FAFBFC",
+      "surfaceRaised": "#FAFBFC",
+      "surfaceSunken": "#EBEEF2",
+      "text": "#111827",
+      "textSecondary": "#4B5563",
+      "textMuted": "#828C9A",
+      "border": "#E3E6EB",
+      "borderStrong": "#CDD2DA",
       "primary": "#1E3A5F",
-      "primarySoft": "#E6EDF5",
-      "onPrimary": "#FAF9F6",
-      "credit": "#A3591A",
-      "creditDeep": "#8A4513",
-      "creditSoft": "#F8ECDF",
-      "onCredit": "#FAF9F6",
-      "payment": "#157A4F",
-      "paymentDeep": "#10613E",
-      "paymentSoft": "#E5F4EC",
-      "onPayment": "#FAF9F6",
-      "forgiven": "#7E5A8A",
-      "forgivenSoft": "#F2ECF5",
-      "onForgiven": "#FAF9F6",
-      "cancelled": "#646A75",
-      "cancelledSoft": "#E9E7E2",
-      "danger": "#A62B2B",
-      "dangerSoft": "#F8E9E9",
-      "onDanger": "#FAF9F6",
+      "primarySoft": "#E4EAF2",
+      "onPrimary": "#FAFBFC",
+      "credit": "#B85D19",
+      "creditDeep": "#9A4C12",
+      "creditSoft": "#F7ECE2",
+      "onCredit": "#FAFBFC",
+      "payment": "#0F766E",
+      "paymentDeep": "#0B5F58",
+      "paymentSoft": "#E1F1EE",
+      "onPayment": "#FAFBFC",
+      "forgiven": "#6D4C82",
+      "forgivenSoft": "#EFE9F3",
+      "onForgiven": "#FAFBFC",
+      "cancelled": "#6B7480",
+      "cancelledSoft": "#EBEEF2",
+      "danger": "#B91C1C",
+      "dangerSoft": "#F9E6E6",
+      "onDanger": "#FAFBFC",
       "whatsapp": "#187C68",
-      "onWhatsapp": "#FAF9F6",
+      "onWhatsapp": "#FAFBFC",
       "focus": "#1E3A5F",
-      "overlay": "rgba(21, 26, 34, 0.48)"
+      "overlay": "rgba(17, 24, 39, 0.45)"
     },
     "dark": {
-      "bg": "#10131A",
-      "surface": "#181D27",
-      "surfaceRaised": "#202735",
-      "surfaceSunken": "#0B0E14",
-      "text": "#F0EFEA",
-      "textSecondary": "#BFC5D0",
-      "textMuted": "#9AA2B1",
-      "border": "#34394A",
-      "borderStrong": "#384359",
-      "primary": "#6EA0DC",
-      "primarySoft": "#1B2B42",
-      "onPrimary": "#0D1726",
-      "credit": "#E8A25E",
-      "creditDeep": "#F2B77E",
-      "creditSoft": "#33251A",
-      "onCredit": "#2A1606",
-      "payment": "#56C48A",
-      "paymentDeep": "#7DD3A4",
-      "paymentSoft": "#132C21",
-      "onPayment": "#062011",
-      "forgiven": "#C7A3D4",
-      "forgivenSoft": "#292030",
-      "onForgiven": "#1B1021",
-      "cancelled": "#7E8796",
+      "bg": "#0B0D12",
+      "surface": "#151922",
+      "surfaceRaised": "#1A1F2A",
+      "surfaceSunken": "#1E2430",
+      "text": "#ECEFF4",
+      "textSecondary": "#98A2B3",
+      "textMuted": "#667085",
+      "border": "#232937",
+      "borderStrong": "#343C4D",
+      "primary": "#7BA6E8",
+      "primarySoft": "#1A2536",
+      "onPrimary": "#0B0D12",
+      "credit": "#E38B4B",
+      "creditDeep": "#EDA06A",
+      "creditSoft": "#2A1D14",
+      "onCredit": "#1A0E05",
+      "payment": "#34C79B",
+      "paymentDeep": "#5AD6B0",
+      "paymentSoft": "#11261F",
+      "onPayment": "#04140E",
+      "forgiven": "#B88CE0",
+      "forgivenSoft": "#231C2C",
+      "onForgiven": "#170F1F",
+      "cancelled": "#7A8496",
       "cancelledSoft": "#1E2430",
-      "danger": "#F07575",
-      "dangerSoft": "#331B1E",
-      "onDanger": "#240808",
+      "danger": "#F0625D",
+      "dangerSoft": "#2E1716",
+      "onDanger": "#1A0605",
       "whatsapp": "#34C787",
       "onWhatsapp": "#062018",
-      "focus": "#6EA0DC",
-      "overlay": "rgba(0, 0, 0, 0.68)"
+      "focus": "#7BA6E8",
+      "overlay": "rgba(0, 0, 0, 0.62)"
     }
   },
   "typography": {
@@ -94,20 +94,64 @@
       "extraBold": "Manrope_800ExtraBold"
     },
     "numbers": {
-      "fontVariant": ["tabular-nums"],
+      "fontVariant": [
+        "tabular-nums"
+      ],
       "writingDirection": "ltr"
     },
     "scale": {
-      "displayAmount": { "fontSize": 38, "fontSizeCompact": 30, "lineHeight": 44, "fontWeight": "700", "letterSpacing": -0.6 },
-      "title": { "fontSize": 22, "lineHeight": 28, "fontWeight": "700", "letterSpacing": -0.3 },
-      "heading": { "fontSize": 17, "lineHeight": 23, "fontWeight": "600", "letterSpacing": -0.15 },
-      "body": { "fontSize": 15, "lineHeight": 22, "fontWeight": "400", "letterSpacing": 0 },
-      "label": { "fontSize": 14, "lineHeight": 18, "fontWeight": "600", "letterSpacing": 0.1 },
-      "caption": { "fontSize": 12, "lineHeight": 16, "fontWeight": "500", "letterSpacing": 0.2 }
+      "displayAmount": {
+        "fontSize": 38,
+        "fontSizeCompact": 30,
+        "lineHeight": 44,
+        "fontWeight": "700",
+        "letterSpacing": -0.6
+      },
+      "title": {
+        "fontSize": 22,
+        "lineHeight": 28,
+        "fontWeight": "700",
+        "letterSpacing": -0.3
+      },
+      "heading": {
+        "fontSize": 17,
+        "lineHeight": 23,
+        "fontWeight": "600",
+        "letterSpacing": -0.15
+      },
+      "body": {
+        "fontSize": 15,
+        "lineHeight": 22,
+        "fontWeight": "400",
+        "letterSpacing": 0
+      },
+      "label": {
+        "fontSize": 14,
+        "lineHeight": 18,
+        "fontWeight": "600",
+        "letterSpacing": 0.1
+      },
+      "caption": {
+        "fontSize": 12,
+        "lineHeight": 16,
+        "fontWeight": "500",
+        "letterSpacing": 0.2
+      }
     }
   },
   "spacing": {
-    "0": 0, "1": 4, "2": 8, "3": 12, "4": 16, "5": 20, "6": 24, "8": 32, "10": 40, "12": 48, "14": 56, "16": 64,
+    "0": 0,
+    "1": 4,
+    "2": 8,
+    "3": 12,
+    "4": 16,
+    "5": 20,
+    "6": 24,
+    "8": 32,
+    "10": 40,
+    "12": 48,
+    "14": 56,
+    "16": 64,
     "touchTargetMin": 48,
     "screenPaddingX": 16,
     "tabBarHeight": 68
@@ -122,30 +166,125 @@
   "quietShadows": {
     "preset": "Indigo Ambient",
     "light": {
-      "card": { "shadowColor": "#1E3A5F", "shadowOffset": { "width": 0, "height": 6 }, "shadowOpacity": 0.06, "shadowRadius": 16, "elevation": 2, "borderWidth": 1, "borderColor": "#D3CDC0" },
-      "button": { "shadowColor": "#1E3A5F", "shadowOffset": { "width": 0, "height": 3 }, "shadowOpacity": 0.05, "shadowRadius": 8, "elevation": 1 },
-      "fab": { "shadowColor": "#1E3A5F", "shadowOffset": { "width": 0, "height": 6 }, "shadowOpacity": 0.28, "shadowRadius": 14, "elevation": 5 },
-      "tabBar": { "shadowColor": "#151A22", "shadowOffset": { "width": 0, "height": -4 }, "shadowOpacity": 0.05, "shadowRadius": 16, "elevation": 4 }
+      "card": {
+        "shadowColor": "#1E3A5F",
+        "shadowOffset": {
+          "width": 0,
+          "height": 6
+        },
+        "shadowOpacity": 0.06,
+        "shadowRadius": 16,
+        "elevation": 2,
+        "borderWidth": 1,
+        "borderColor": "#E3E6EB"
+      },
+      "button": {
+        "shadowColor": "#1E3A5F",
+        "shadowOffset": {
+          "width": 0,
+          "height": 3
+        },
+        "shadowOpacity": 0.05,
+        "shadowRadius": 8,
+        "elevation": 1
+      },
+      "fab": {
+        "shadowColor": "#1E3A5F",
+        "shadowOffset": {
+          "width": 0,
+          "height": 6
+        },
+        "shadowOpacity": 0.28,
+        "shadowRadius": 14,
+        "elevation": 5
+      },
+      "tabBar": {
+        "shadowColor": "#151A22",
+        "shadowOffset": {
+          "width": 0,
+          "height": -4
+        },
+        "shadowOpacity": 0.05,
+        "shadowRadius": 16,
+        "elevation": 4
+      }
     },
     "dark": {
-      "card": { "shadowColor": "#000000", "shadowOffset": { "width": 0, "height": 6 }, "shadowOpacity": 0.32, "shadowRadius": 18, "elevation": 2, "borderWidth": 1, "borderColor": "#34394A" },
-      "button": { "shadowColor": "#000000", "shadowOffset": { "width": 0, "height": 3 }, "shadowOpacity": 0.26, "shadowRadius": 8, "elevation": 1 },
-      "fab": { "shadowColor": "#000000", "shadowOffset": { "width": 0, "height": 8 }, "shadowOpacity": 0.52, "shadowRadius": 18, "elevation": 5 },
-      "tabBar": { "shadowColor": "#000000", "shadowOffset": { "width": 0, "height": -4 }, "shadowOpacity": 0.36, "shadowRadius": 18, "elevation": 4 }
+      "card": {
+        "shadowColor": "#000000",
+        "shadowOffset": {
+          "width": 0,
+          "height": 6
+        },
+        "shadowOpacity": 0.32,
+        "shadowRadius": 18,
+        "elevation": 2,
+        "borderWidth": 1,
+        "borderColor": "#232937"
+      },
+      "button": {
+        "shadowColor": "#000000",
+        "shadowOffset": {
+          "width": 0,
+          "height": 3
+        },
+        "shadowOpacity": 0.26,
+        "shadowRadius": 8,
+        "elevation": 1
+      },
+      "fab": {
+        "shadowColor": "#000000",
+        "shadowOffset": {
+          "width": 0,
+          "height": 8
+        },
+        "shadowOpacity": 0.52,
+        "shadowRadius": 18,
+        "elevation": 5
+      },
+      "tabBar": {
+        "shadowColor": "#000000",
+        "shadowOffset": {
+          "width": 0,
+          "height": -4
+        },
+        "shadowOpacity": 0.36,
+        "shadowRadius": 18,
+        "elevation": 4
+      }
     }
   },
   "motion": {
     "philosophy": "Weighted Magnetic",
-    "duration": { "tap": 70, "exit": 150, "enter": 280, "amountRoll": 320, "stampSave": 340, "forgive": 420 },
+    "duration": {
+      "tap": 70,
+      "exit": 150,
+      "enter": 280,
+      "amountRoll": 320,
+      "stampSave": 340,
+      "forgive": 420
+    },
     "easing": {
       "enter": "cubic-bezier(0.16, 1, 0.3, 1)",
       "exit": "cubic-bezier(0.4, 0, 1, 1)",
       "tap": "cubic-bezier(0.2, 0, 0, 1)"
     },
     "spring": {
-      "tabIndicator": { "damping": 22, "stiffness": 320, "mass": 0.8 },
-      "fab": { "damping": 18, "stiffness": 340, "mass": 0.75 },
-      "sheet": { "damping": 26, "stiffness": 280, "mass": 0.9 }
+      "tabIndicator": {
+        "damping": 22,
+        "stiffness": 320,
+        "mass": 0.8
+      },
+      "fab": {
+        "damping": 18,
+        "stiffness": 340,
+        "mass": 0.75
+      },
+      "sheet": {
+        "damping": 26,
+        "stiffness": 280,
+        "mass": 0.9
+      }
     }
   },
   "haptics": {
@@ -158,11 +297,26 @@
   "icon": {
     "family": "lucide-react-native",
     "scale": {
-      "xs": { "size": 14, "strokeWidth": 2.0 },
-      "sm": { "size": 18, "strokeWidth": 1.85 },
-      "md": { "size": 22, "strokeWidth": 1.8 },
-      "lg": { "size": 26, "strokeWidth": 1.75 },
-      "xl": { "size": 32, "strokeWidth": 1.5 }
+      "xs": {
+        "size": 14,
+        "strokeWidth": 2.0
+      },
+      "sm": {
+        "size": 18,
+        "strokeWidth": 1.85
+      },
+      "md": {
+        "size": 22,
+        "strokeWidth": 1.8
+      },
+      "lg": {
+        "size": 26,
+        "strokeWidth": 1.75
+      },
+      "xl": {
+        "size": 32,
+        "strokeWidth": 1.5
+      }
     }
   }
 }

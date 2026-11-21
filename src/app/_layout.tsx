@@ -11,6 +11,7 @@ import {
   ReadexPro_600SemiBold,
   ReadexPro_700Bold,
 } from '@expo-google-fonts/readex-pro';
+import { JetBrainsMono_700Bold } from '@expo-google-fonts/jetbrains-mono';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -28,6 +29,9 @@ import { OnboardingScreen } from '@/screens/onboarding-screen';
 import { hasPin } from '@/security/pin';
 import { AppProvider, useApp } from '@/state/use-app';
 import { getFontFamily, ThemeProvider, useTheme } from '@/theme';
+
+// Tailwind (NativeWind) styles — imported after Expo's own modules so the native runtime is ready first.
+import '../global.css';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -122,6 +126,7 @@ export default function RootLayout() {
     Manrope_600SemiBold,
     Manrope_700Bold,
     Manrope_800ExtraBold,
+    JetBrainsMono_700Bold,
   });
 
   return (

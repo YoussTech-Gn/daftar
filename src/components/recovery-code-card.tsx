@@ -1,15 +1,23 @@
-import { StyleSheet, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { ICON_SCALE, KeyRound } from '@/components/icons';
+import { Copy, ICON_SCALE, KeyRound } from '@/components/icons';
 import { DaftarButton, DaftarText } from '@/components/ui';
+import { haptic } from '@/lib/haptics';
 import { formatRecoveryCode } from '@/security/recovery-code';
+import { useSessionStore } from '@/state/session-store';
 import { useApp } from '@/state/use-app';
 import { useTheme } from '@/theme';
 
-/** Shows a freshly created recovery code once, and asks the shopkeeper to write it on paper. */
+/**
+ * Shows a freshly created recovery code once, and asks the shopkeeper to write it on paper.
+ * V4 (decision 0018): JetBrains Mono, tap-to-copy glass card.
+ */
 export function RecoveryCodeCard({ code, onConfirm }: { code: string; onConfirm: () => void }) {
   const { t } = useApp();
   const { colors, shadows } = useTheme();
+  const showToast = useSessionStore((s) => s.showToast);
+  const formatted = formatRecoveryCode(code);
 
   return (
     <View style={styles.wrap}>
@@ -20,15 +28,28 @@ export function RecoveryCodeCard({ code, onConfirm }: { code: string; onConfirm:
         {t('recoveryTitle')}
       </DaftarText>
 
-      <View
-        style={[styles.codeBox, shadows.card, { backgroundColor: colors.surface, borderColor: colors.borderStrong }]}
-        accessible
-        accessibilityLabel={code.split('').join(' ')}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${code.split('').join(' ')}. ${t('tapToCopy')}`}
+        onPress={async () => {
+          await Clipboard.setStringAsync(formatted);
+          haptic.success();
+          showToast(t('codeCopied'));
+        }}
+        style={({ pressed }) => [
+          styles.codeBox,
+          shadows.card,
+          { backgroundColor: pressed ? colors.surfaceSunken : colors.surface, borderColor: colors.borderStrong },
+        ]}>
         {/* Always left-to-right, even in Arabic: it is copied character by character. */}
-        <DaftarText role="title" weight="800" numeric align="center" style={styles.codeText}>
-          {`⁦${formatRecoveryCode(code)}⁩`}
-        </DaftarText>
-      </View>
+        <Text style={[styles.codeText, { color: colors.text }]}>{`⁦${formatted}⁩`}</Text>
+        <View style={styles.copyHint}>
+          <Copy size={14} color={colors.textSecondary} strokeWidth={1.9} />
+          <DaftarText role="caption" tone="secondary">
+            {t('tapToCopy')}
+          </DaftarText>
+        </View>
+      </Pressable>
 
       <DaftarText role="body" tone="secondary" align="center">
         {t('recoveryBody')}
@@ -55,15 +76,24 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   codeBox: {
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    paddingVertical: 20,
+    paddingVertical: 18,
     paddingHorizontal: 12,
   },
   codeText: {
-    fontSize: 26,
+    fontFamily: 'JetBrainsMono_700Bold',
+    fontSize: 25,
     lineHeight: 34,
-    letterSpacing: 2,
+    letterSpacing: 1,
+    textAlign: 'center',
+  },
+  copyHint: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
   },
 });
