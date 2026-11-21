@@ -8,8 +8,11 @@ import { migrate } from '@/db/migrations';
 import { LockScreen } from '@/screens/lock-screen';
 import { OnboardingScreen } from '@/screens/onboarding-screen';
 import { hasPin } from '@/security/pin';
-import { AppProvider, useApp } from '@/state/app-context';
+import { AppProvider, useApp } from '@/state/use-app';
 import { usePalette } from '@/theme';
+
+/** Opening any screen directly (deep link, notification) keeps Home underneath, so Back never exits. */
+export const unstable_settings = { initialRouteName: 'index' };
 
 /** Lock again if the app stayed in background longer than this. */
 const RELOCK_AFTER_MS = 30_000;

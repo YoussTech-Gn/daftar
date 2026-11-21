@@ -4,11 +4,12 @@ import { useCallback, useRef, useState } from 'react';
 import { BackHandler, FlatList, Platform, Pressable, StyleSheet, TextInput, ToastAndroid, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BookOpen, ICON, Package, Plus, Search, Settings } from '@/components/icons';
 import { Avatar, Button, Card, Chip, ChipRow, Row, Txt } from '@/components/ui';
 import { getSummary, listCustomers } from '@/db/repository';
 import { daysAgo } from '@/domain/time';
 import type { CustomerWithBalance, Summary } from '@/domain/types';
-import { useApp } from '@/state/app-context';
+import { useApp } from '@/state/use-app';
 import { usePalette } from '@/theme';
 
 type Filter = 'all' | 'owes' | 'settled';
@@ -65,7 +66,7 @@ export default function HomeScreen() {
           headerRight: () => (
             <Link href="/settings" asChild>
               <Pressable accessibilityRole="button" accessibilityLabel={t('settings')} hitSlop={12}>
-                <Txt size={22}>⚙️</Txt>
+                <Settings size={ICON.lg} color={palette.text} />
               </Pressable>
             </Link>
           ),
@@ -109,33 +110,30 @@ export default function HomeScreen() {
             </Row>
             <Row gap={10}>
               <Button
-                label={`📦 ${t('products')}`}
+                label={t('products')}
+                icon={Package}
                 variant="secondary"
                 onPress={() => router.push('/products')}
                 style={styles.smallButton}
               />
               <Button
-                label={`⚙️ ${t('settings')}`}
+                label={t('settings')}
+                icon={Settings}
                 variant="secondary"
                 onPress={() => router.push('/settings')}
                 style={styles.smallButton}
               />
             </Row>
-            <TextInput
-              value={search}
-              onChangeText={setSearch}
-              placeholder={`🔍  ${t('searchCustomers')}`}
-              placeholderTextColor={palette.muted}
-              style={[
-                styles.search,
-                {
-                  backgroundColor: palette.card,
-                  borderColor: palette.border,
-                  color: palette.text,
-                  textAlign: isRTL ? 'right' : 'left',
-                },
-              ]}
-            />
+            <Row gap={8} style={[styles.search, { backgroundColor: palette.card, borderColor: palette.border }]}>
+              <Search size={ICON.md} color={palette.muted} />
+              <TextInput
+                value={search}
+                onChangeText={setSearch}
+                placeholder={t('searchCustomers')}
+                placeholderTextColor={palette.muted}
+                style={{ flex: 1, color: palette.text, fontSize: 16, textAlign: isRTL ? 'right' : 'left' }}
+              />
+            </Row>
             <ChipRow>
               <Chip label={t('filterAll')} selected={filter === 'all'} onPress={() => setFilter('all')} />
               <Chip label={t('filterOwes')} selected={filter === 'owes'} onPress={() => setFilter('owes')} />
@@ -145,7 +143,7 @@ export default function HomeScreen() {
         }
         ListEmptyComponent={
           <View style={{ alignItems: 'center', gap: 6, paddingVertical: 48 }}>
-            <Txt size={40}>📒</Txt>
+            <BookOpen size={ICON.xl} color={palette.primary} strokeWidth={1.75} />
             <Txt weight="700" style={{ textAlign: 'center' }}>
               {t('noCustomers')}
             </Txt>
@@ -164,9 +162,12 @@ export default function HomeScreen() {
           { backgroundColor: palette.primary, opacity: pressed ? 0.85 : 1 },
           isRTL ? { left: 20 } : { right: 20 },
         ]}>
-        <Txt weight="700" style={{ color: palette.primaryText }}>
-          ＋ {t('addCustomer')}
-        </Txt>
+        <Row gap={8}>
+          <Plus size={ICON.md} color={palette.primaryText} strokeWidth={2.5} />
+          <Txt weight="700" style={{ color: palette.primaryText }}>
+            {t('addCustomer')}
+          </Txt>
+        </Row>
       </Pressable>
     </SafeAreaView>
   );
@@ -224,9 +225,12 @@ function CustomerRow({ customer }: { customer: CustomerWithBalance }) {
                   styles.quick,
                   { backgroundColor: palette.creditSoft, opacity: pressed ? 0.7 : 1 },
                 ]}>
-                <Txt size={13} weight="700" style={{ color: palette.credit }}>
-                  {t('quickCredit')}
-                </Txt>
+                <Row gap={4}>
+                  <Plus size={ICON.sm} color={palette.credit} strokeWidth={2.75} />
+                  <Txt size={13} weight="700" style={{ color: palette.credit }}>
+                    {t('quickCredit')}
+                  </Txt>
+                </Row>
               </Pressable>
             </View>
           </Row>
@@ -239,7 +243,7 @@ function CustomerRow({ customer }: { customer: CustomerWithBalance }) {
 const styles = StyleSheet.create({
   stat: { flex: 1, gap: 4, padding: 12 },
   smallButton: { flex: 1, minHeight: 44 },
-  search: { minHeight: 46, borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, fontSize: 16 },
+  search: { minHeight: 46, borderRadius: 12, borderWidth: 1, paddingHorizontal: 14 },
   quick: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
   fab: {
     position: 'absolute',

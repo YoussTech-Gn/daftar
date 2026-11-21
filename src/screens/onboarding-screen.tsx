@@ -1,28 +1,27 @@
-import { useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
 import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, Chip, ChipRow, Field, Txt } from '@/components/ui';
+import { FormField } from '@/components/form-field';
+import { Button, Chip, ChipRow, Txt } from '@/components/ui';
 import { CURRENCIES } from '@/domain/currency';
+import { shopSchema, type ShopFormValues } from '@/domain/schemas';
 import { LANGUAGES } from '@/i18n/translations';
-import { useApp } from '@/state/app-context';
+import { useApp } from '@/state/use-app';
 import { usePalette } from '@/theme';
 
 export function OnboardingScreen() {
   const { t, settings, updateSettings } = useApp();
   const palette = usePalette();
-  const [shopName, setShopName] = useState(settings.shopName);
-  const [countryCode, setCountryCode] = useState(settings.countryCode);
-  const [saving, setSaving] = useState(false);
+  const { control, handleSubmit, formState } = useForm<ShopFormValues>({
+    resolver: zodResolver(shopSchema),
+    defaultValues: { shopName: settings.shopName, countryCode: settings.countryCode },
+  });
 
-  async function finish() {
-    setSaving(true);
-    await updateSettings({
-      shopName: shopName.trim(),
-      countryCode: countryCode.replace(/\D/g, ''),
-      onboarded: true,
-    });
-  }
+  const finish = handleSubmit(async (values) => {
+    await updateSettings({ shopName: values.shopName.trim(), countryCode: values.countryCode.trim(), onboarded: true });
+  });
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: palette.background }}>
@@ -66,19 +65,14 @@ export function OnboardingScreen() {
             </ChipRow>
           </View>
 
-          <Field
-            label={t('shopName')}
-            placeholder={t('shopNamePlaceholder')}
-            value={shopName}
-            onChangeText={setShopName}
-          />
+          <FormField control={control} name="shopName" label={t('shopName')} placeholder={t('shopNamePlaceholder')} />
           <View style={{ gap: 6 }}>
-            <Field
+            <FormField
+              control={control}
+              name="countryCode"
               label={t('countryCode')}
               placeholder="224"
               keyboardType="number-pad"
-              value={countryCode}
-              onChangeText={setCountryCode}
               maxLength={4}
             />
             <Txt size={13} muted>
@@ -86,7 +80,7 @@ export function OnboardingScreen() {
             </Txt>
           </View>
 
-          <Button label={t('start')} onPress={finish} loading={saving} />
+          <Button label={t('start')} onPress={finish} loading={formState.isSubmitting} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

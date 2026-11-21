@@ -1,4 +1,5 @@
 import { getCurrency, parseAmount } from '@/domain/currency';
+import type { ProductUnit } from '@/domain/types';
 
 /** Keys of the in-app calculator keypad. */
 export type CalcKey = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '000' | ',' | '+' | 'back' | 'clear';
@@ -34,13 +35,41 @@ export interface PickedItem {
   name: string;
   price: number;
   qty: number;
+  unit?: ProductUnit;
 }
 
-/** Builds the entry note from picked items, e.g. "Riz ×2, Huile". */
+const FRACTIONS: Record<string, string> = { '0.25': '¼', '0.5': '½', '0.75': '¾' };
+
+/** 0.5 → "½", 1.5 → "1½", 2 → "2", 0.3 → "0.3". */
+export function formatQty(qty: number): string {
+  const whole = Math.floor(qty);
+  const frac = Math.round((qty - whole) * 100) / 100;
+  if (frac === 0) return String(whole);
+  const symbol = FRACTIONS[String(frac)];
+  if (symbol) return whole === 0 ? symbol : `${whole}${symbol}`;
+  return String(Math.round(qty * 1000) / 1000);
+}
+
+const UNIT_SUFFIX: Record<ProductUnit, string> = { piece: '', pack: '', kg: 'kg', liter: 'L' };
+
+/** One readable line: "½ kg Riz", "1½ L Huile", "Pain ×3", "Lait". */
+export function itemLabel(item: PickedItem): string {
+  const unit = item.unit ?? 'piece';
+  const suffix = UNIT_SUFFIX[unit];
+  if (suffix) return `${formatQty(item.qty)} ${suffix} ${item.name}`;
+  return item.qty === 1 ? item.name : `${item.name} ×${formatQty(item.qty)}`;
+}
+
+/** Builds the entry note from picked items, e.g. "½ kg Riz, Pain ×3". */
 export function itemsToNote(items: PickedItem[]): string {
-  return items.map((i) => (i.qty > 1 ? `${i.name} ×${i.qty}` : i.name)).join(', ');
+  return items.map(itemLabel).join(', ');
+}
+
+/** Line total in minor units (rounded for fractional quantities). */
+export function lineTotal(item: PickedItem): number {
+  return Math.round(item.price * item.qty);
 }
 
 export function itemsTotal(items: PickedItem[]): number {
-  return items.reduce((sum, i) => sum + i.price * i.qty, 0);
+  return items.reduce((sum, i) => sum + lineTotal(i), 0);
 }

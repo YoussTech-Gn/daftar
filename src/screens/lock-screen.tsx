@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PinPad } from '@/components/pin-pad';
 import { Txt } from '@/components/ui';
 import { verifyPin } from '@/security/pin';
-import { useApp } from '@/state/app-context';
+import { useApp } from '@/state/use-app';
 import { usePalette } from '@/theme';
 
 export function LockScreen({ onUnlock }: { onUnlock: () => void }) {

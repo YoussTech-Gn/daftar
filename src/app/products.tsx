@@ -1,26 +1,36 @@
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { Alert, FlatList, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, Card, Field, Row, Txt } from '@/components/ui';
+import { FormField } from '@/components/form-field';
+import { ICON, Plus, Trash2 } from '@/components/icons';
+import { Button, Card, Chip, ChipRow, Row, Txt } from '@/components/ui';
 import { createProduct, deleteProduct, listProducts, updateProduct } from '@/db/repository';
 import { formatAmount, getCurrency, parseAmount } from '@/domain/currency';
-import type { Product } from '@/domain/types';
-import { useApp } from '@/state/app-context';
+import { productSchema, type ProductFormValues } from '@/domain/schemas';
+import { isFractionalUnit, PRODUCT_UNITS, type Product } from '@/domain/types';
+import { useApp } from '@/state/use-app';
 import { usePalette } from '@/theme';
 
-/** Product catalog: name + price, used for quick-tap credit entry. Tap a row to edit it. */
+const EMPTY: ProductFormValues = { name: '', price: '', unit: 'piece' };
+
+/** Product catalog: name, price and unit, used for quick-tap credit entry. Tap a row to edit it. */
 export default function ProductsScreen() {
   const db = useSQLiteContext();
   const { t, money, settings } = useApp();
   const palette = usePalette();
   const [products, setProducts] = useState<Product[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
-  const [error, setError] = useState<string | null>(null);
+
+  const schema = useMemo(() => productSchema(settings.currency), [settings.currency]);
+  const { control, handleSubmit, reset, formState } = useForm<ProductFormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: EMPTY,
+  });
 
   const load = useCallback(async () => setProducts(await listProducts(db)), [db]);
 
@@ -32,19 +42,24 @@ export default function ProductsScreen() {
 
   function resetForm() {
     setEditingId(null);
-    setName('');
-    setPrice('');
-    setError(null);
+    reset(EMPTY);
   }
 
-  async function save() {
-    const minor = parseAmount(price, settings.currency);
-    if (!name.trim()) return setError(t('nameRequired'));
-    if (minor === null) return setError(t('invalidAmount'));
-    if (editingId === null) await createProduct(db, name, minor);
-    else await updateProduct(db, editingId, name, minor);
+  const onSubmit = handleSubmit(async (values) => {
+    const input = { name: values.name, price: parseAmount(values.price, settings.currency) ?? 0, unit: values.unit };
+    if (editingId === null) await createProduct(db, input);
+    else await updateProduct(db, editingId, input);
     resetForm();
     load();
+  });
+
+  function startEdit(p: Product) {
+    setEditingId(p.id);
+    reset({
+      name: p.name,
+      price: formatAmount(p.price, settings.currency, false).replace(/\s/g, ''),
+      unit: p.unit,
+    });
   }
 
   function confirmDelete(p: Product) {
@@ -74,17 +89,36 @@ export default function ProductsScreen() {
             <Txt muted size={14}>
               {t('productsHint')}
             </Txt>
-            <Field label={t('productName')} value={name} onChangeText={setName} placeholder="Riz 25kg" />
-            <Field
-              label={`${t('productPrice')} (${getCurrency(settings.currency).symbol})`}
-              value={price}
-              onChangeText={setPrice}
-              keyboardType="decimal-pad"
-              placeholder="250000"
+            <FormField control={control} name="name" label={t('productName')} placeholder="Riz" />
+            <Txt size={14} muted weight="600">
+              {t('soldBy')}
+            </Txt>
+            <Controller
+              control={control}
+              name="unit"
+              render={({ field }) => (
+                <ChipRow>
+                  {PRODUCT_UNITS.map((u) => (
+                    <Chip key={u} label={t(`unit_${u}`)} selected={field.value === u} onPress={() => field.onChange(u)} />
+                  ))}
+                </ChipRow>
+              )}
             />
-            {error ? <Txt style={{ color: palette.danger }}>{error}</Txt> : null}
+            <FormField
+              control={control}
+              name="price"
+              label={`${t('productPrice')} (${getCurrency(settings.currency).symbol})`}
+              keyboardType="decimal-pad"
+              placeholder="25000"
+            />
             <Row gap={10}>
-              <Button label={editingId === null ? t('addProduct') : t('save')} onPress={save} style={{ flex: 1 }} />
+              <Button
+                label={editingId === null ? t('addProduct') : t('save')}
+                icon={editingId === null ? Plus : undefined}
+                onPress={onSubmit}
+                loading={formState.isSubmitting}
+                style={{ flex: 1 }}
+              />
               {editingId !== null ? (
                 <Button label={t('cancel')} variant="secondary" onPress={resetForm} style={{ flex: 1 }} />
               ) : null}
@@ -93,14 +127,7 @@ export default function ProductsScreen() {
         }
         ListEmptyComponent={<Txt muted>{t('noProducts')}</Txt>}
         renderItem={({ item }) => (
-          <Pressable
-            onPress={() => {
-              setEditingId(item.id);
-              setName(item.name);
-              setPrice(formatAmount(item.price, settings.currency, false).replace(/\s/g, ''));
-              setError(null);
-            }}
-            onLongPress={() => confirmDelete(item)}>
+          <Pressable onPress={() => startEdit(item)} onLongPress={() => confirmDelete(item)}>
             <Card style={{ paddingVertical: 12, borderColor: editingId === item.id ? palette.primary : palette.border }}>
               <Row>
                 <View style={{ flex: 1 }}>
@@ -108,11 +135,10 @@ export default function ProductsScreen() {
                 </View>
                 <Txt weight="700" style={{ color: palette.primary }}>
                   {money(item.price)}
+                  {isFractionalUnit(item.unit) || item.unit === 'pack' ? ` / ${t(`unit_${item.unit}`)}` : ''}
                 </Txt>
                 <Pressable hitSlop={10} onPress={() => confirmDelete(item)} accessibilityLabel={t('delete')}>
-                  <Txt muted size={18}>
-                    ✕
-                  </Txt>
+                  <Trash2 size={ICON.md} color={palette.muted} />
                 </Pressable>
               </Row>
             </Card>

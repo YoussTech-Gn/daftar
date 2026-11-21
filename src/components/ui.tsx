@@ -13,7 +13,8 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { useApp } from '@/state/app-context';
+import { ICON, type LucideIcon } from '@/components/icons';
+import { useApp } from '@/state/use-app';
 import { usePalette } from '@/theme';
 
 /** Text that follows the app language direction (RTL for Arabic). */
@@ -70,6 +71,7 @@ export function Button({
   label,
   onPress,
   variant = 'primary',
+  icon: Icon,
   disabled,
   loading,
   style,
@@ -77,11 +79,14 @@ export function Button({
   label: string;
   onPress: () => void;
   variant?: ButtonVariant;
+  /** Optional Lucide icon shown before the label (after it in RTL). */
+  icon?: LucideIcon;
   disabled?: boolean;
   loading?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const palette = usePalette();
+  const { isRTL } = useApp();
   const colors: Record<ButtonVariant, { bg: string; fg: string; border?: string }> = {
     primary: { bg: palette.primary, fg: palette.primaryText },
     secondary: { bg: palette.card, fg: palette.text, border: palette.border },
@@ -108,7 +113,10 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={c.fg} />
       ) : (
-        <Text style={[styles.buttonText, { color: c.fg }]}>{label}</Text>
+        <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
+          {Icon ? <Icon size={ICON.md} color={c.fg} strokeWidth={2.25} /> : null}
+          <Text style={[styles.buttonText, { color: c.fg }]}>{label}</Text>
+        </View>
       )}
     </Pressable>
   );

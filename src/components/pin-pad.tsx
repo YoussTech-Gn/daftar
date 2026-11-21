@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { Delete, ICON } from '@/components/icons';
 import { Txt } from '@/components/ui';
 import { usePalette } from '@/theme';
 
-const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
+const BACK = 'back';
+const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', BACK];
 export const PIN_LENGTH = 4;
 
 /** Numeric keypad that calls onComplete once PIN_LENGTH digits are entered. */
@@ -21,7 +23,7 @@ export function PinPad({
   const [pin, setPin] = useState('');
 
   async function press(key: string) {
-    if (key === '⌫') {
+    if (key === BACK) {
       setPin((p) => p.slice(0, -1));
       return;
     }
@@ -58,14 +60,18 @@ export function PinPad({
           <Pressable
             key={i}
             accessibilityRole="button"
-            accessibilityLabel={key === '⌫' ? 'delete' : key}
+            accessibilityLabel={key === BACK ? 'delete' : key}
             disabled={!key}
             onPress={() => press(key)}
             style={({ pressed }) => [
               styles.key,
               { backgroundColor: key ? (pressed ? palette.border : palette.card) : 'transparent' },
             ]}>
-            <Text style={{ fontSize: 26, fontWeight: '600', color: palette.text }}>{key}</Text>
+            {key === BACK ? (
+              <Delete size={ICON.lg} color={palette.text} />
+            ) : (
+              <Text style={{ fontSize: 26, fontWeight: '600', color: palette.text }}>{key}</Text>
+            )}
           </Pressable>
         ))}
       </View>

@@ -20,6 +20,14 @@
 - [x] WhatsApp receipt prompt after each entry, with the new balance
 - [x] Back twice to exit on home
 
+## ✅ Night 2b (2026-11-21) — cash loans, units, stack (decisions 0009, 0010, 0011)
+- [x] Credit type: 💵 Money (default) or 🛒 Goods
+- [x] Product units piece / kg / liter / pack; quantity picker ¼ ½ ¾ 1 1½ 2 3 5 + custom
+- [x] Items stored per entry (`entry_items`), shown line by line with prices in the history
+- [x] Zustand settings store; React Hook Form + Zod for customer, product and shop forms
+- [x] Home stays under any screen opened by link (Back never exits from an inner screen)
+- [x] WhatsApp-for-shopkeepers analysed (decision 0011) — not built, needs validation first
+
 ## Night 3 — collection & trust
 - [ ] Due date on credit + local reminder notification for the shopkeeper; "Overdue" filter
 - [ ] Customer statement as PDF (expo-print) shared over WhatsApp

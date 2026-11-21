@@ -1,22 +1,39 @@
+import { zodResolver } from '@hookform/resolvers/zod';
 import Constants from 'expo-constants';
 import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { Alert, ScrollView } from 'react-native';
 
-import { Button, Card, Chip, ChipRow, Field, Txt } from '@/components/ui';
+import { FormField } from '@/components/form-field';
+import {
+  FileSpreadsheet,
+  HardDriveDownload,
+  HardDriveUpload,
+  LockKeyhole,
+  LockKeyholeOpen,
+} from '@/components/icons';
+import { Button, Card, Chip, ChipRow, Txt } from '@/components/ui';
 import { CURRENCIES } from '@/domain/currency';
+import { shopSchema, type ShopFormValues } from '@/domain/schemas';
 import { LANGUAGES } from '@/i18n/translations';
 import { importAll, pickBackup, shareBackup, shareCsv } from '@/lib/export';
 import { hasPin, removePin } from '@/security/pin';
-import { useApp } from '@/state/app-context';
+import { useApp } from '@/state/use-app';
 
 export default function SettingsScreen() {
   const db = useSQLiteContext();
   const { t, settings, updateSettings } = useApp();
   const [pinOn, setPinOn] = useState(false);
-  const [shopName, setShopName] = useState(settings.shopName);
-  const [countryCode, setCountryCode] = useState(settings.countryCode);
+  const { control, handleSubmit } = useForm<ShopFormValues>({
+    resolver: zodResolver(shopSchema),
+    defaultValues: { shopName: settings.shopName, countryCode: settings.countryCode },
+  });
+  // Saved when the user leaves a field; invalid values show an error and are not saved.
+  const saveShop = handleSubmit((values) =>
+    updateSettings({ shopName: values.shopName.trim(), countryCode: values.countryCode.trim() }),
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -59,19 +76,14 @@ export default function SettingsScreen() {
   return (
     <ScrollView contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
       <Card style={{ gap: 14 }}>
-        <Field
-          label={t('shopName')}
-          value={shopName}
-          onChangeText={setShopName}
-          onEndEditing={() => updateSettings({ shopName: shopName.trim() })}
-        />
-        <Field
+        <FormField control={control} name="shopName" label={t('shopName')} onEndEditing={() => saveShop()} />
+        <FormField
+          control={control}
+          name="countryCode"
           label={t('countryCode')}
-          value={countryCode}
           keyboardType="number-pad"
           maxLength={4}
-          onChangeText={setCountryCode}
-          onEndEditing={() => updateSettings({ countryCode: countryCode.replace(/\D/g, '') })}
+          onEndEditing={() => saveShop()}
         />
         <Txt weight="600">{t('chooseLanguage')}</Txt>
         <ChipRow>
@@ -104,12 +116,14 @@ export default function SettingsScreen() {
         <Txt muted>{pinOn ? t('pinEnabled') : t('pinDisabled')}</Txt>
         <Button
           label={pinOn ? t('changePin') : t('setPin')}
+          icon={LockKeyhole}
           variant="secondary"
           onPress={() => router.push('/pin-setup')}
         />
         {pinOn ? (
           <Button
             label={t('removePin')}
+            icon={LockKeyholeOpen}
             variant="danger"
             onPress={() =>
               run(async () => {
@@ -126,9 +140,19 @@ export default function SettingsScreen() {
           {t('data')}
         </Txt>
         <Txt muted>{t('dataPromise')}</Txt>
-        <Button label={t('exportCsv')} variant="secondary" onPress={() => run(() => shareCsv(db, settings.currency))} />
-        <Button label={t('backupJson')} variant="secondary" onPress={() => run(() => shareBackup(db))} />
-        <Button label={t('restoreJson')} variant="secondary" onPress={restore} />
+        <Button
+          label={t('exportCsv')}
+          icon={FileSpreadsheet}
+          variant="secondary"
+          onPress={() => run(() => shareCsv(db, settings.currency))}
+        />
+        <Button
+          label={t('backupJson')}
+          icon={HardDriveDownload}
+          variant="secondary"
+          onPress={() => run(() => shareBackup(db))}
+        />
+        <Button label={t('restoreJson')} icon={HardDriveUpload} variant="secondary" onPress={restore} />
       </Card>
 
       <Card style={{ gap: 4 }}>

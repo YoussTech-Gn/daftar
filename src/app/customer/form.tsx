@@ -1,13 +1,18 @@
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Contact, requestPermissionsAsync } from 'expo-contacts';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { Alert, ScrollView } from 'react-native';
 
-import { Button, Field, Txt } from '@/components/ui';
+import { FormField } from '@/components/form-field';
+import { ContactRound } from '@/components/icons';
+import { Button, Txt } from '@/components/ui';
 import { countCustomers, createCustomer, getCustomer, updateCustomer } from '@/db/repository';
 import { ENFORCE_FREE_LIMIT, FREE_CUSTOMER_LIMIT } from '@/domain/plan';
-import { useApp } from '@/state/app-context';
+import { customerSchema, type CustomerFormValues } from '@/domain/schemas';
+import { useApp } from '@/state/use-app';
 import { usePalette } from '@/theme';
 
 /** Create a customer (optionally from phone contacts), or edit one when an `id` param is given. */
@@ -17,21 +22,19 @@ export default function CustomerFormScreen() {
   const palette = usePalette();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const editingId = id ? Number(id) : null;
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+
+  const { control, handleSubmit, reset, setValue, formState } = useForm<CustomerFormValues>({
+    resolver: zodResolver(customerSchema),
+    defaultValues: { name: '', phone: '', note: '' },
+  });
 
   useEffect(() => {
     if (editingId === null) return;
     getCustomer(db, editingId).then((c) => {
-      if (!c) return;
-      setName(c.name);
-      setPhone(c.phone ?? '');
-      setNote(c.note ?? '');
+      if (c) reset({ name: c.name, phone: c.phone ?? '', note: c.note ?? '' });
     });
-  }, [db, editingId]);
+  }, [db, editingId, reset]);
 
   async function pickContact() {
     try {
@@ -43,25 +46,19 @@ export default function CustomerFormScreen() {
       const contact = await Contact.presentPicker();
       if (!contact) return;
       const [fullName, phones] = await Promise.all([contact.getFullName(), contact.getPhones()]);
-      if (fullName) setName(fullName);
+      if (fullName) setValue('name', fullName, { shouldValidate: true });
       const number = phones.find((p) => p.number)?.number;
-      if (number) setPhone(number);
-      setError(null);
+      if (number) setValue('phone', number, { shouldValidate: true });
     } catch {
       Alert.alert(t('error'));
     }
   }
 
-  async function save() {
-    if (!name.trim()) {
-      setError(t('nameRequired'));
-      return;
-    }
-    setSaving(true);
-    const input = { name, phone, note };
+  const onSubmit = handleSubmit(async (values) => {
+    setError(null);
     try {
       if (editingId !== null) {
-        await updateCustomer(db, editingId, input);
+        await updateCustomer(db, editingId, values);
         router.back();
         return;
       }
@@ -69,37 +66,29 @@ export default function CustomerFormScreen() {
         Alert.alert(t('appName'), t('freeLimitReached', { limit: FREE_CUSTOMER_LIMIT }));
         return;
       }
-      const newId = await createCustomer(db, input);
+      const newId = await createCustomer(db, values);
       router.replace({ pathname: '/customer/[id]', params: { id: String(newId) } });
     } catch {
       setError(t('error'));
-    } finally {
-      setSaving(false);
     }
-  }
+  });
 
   return (
     <ScrollView contentContainerStyle={{ padding: 20, gap: 18 }} keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: editingId !== null ? t('edit') : t('addCustomer') }} />
-      {editingId === null ? <Button label={t('importContact')} variant="secondary" onPress={pickContact} /> : null}
-      <Field
-        label={t('customerName')}
-        value={name}
-        onChangeText={(v) => {
-          setName(v);
-          setError(null);
-        }}
-        autoCapitalize="words"
-      />
-      <Field label={t('phoneOptional')} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-      <Field
+      {editingId === null ? (
+        <Button label={t('importContact')} icon={ContactRound} variant="secondary" onPress={pickContact} />
+      ) : null}
+      <FormField control={control} name="name" label={t('customerName')} autoCapitalize="words" />
+      <FormField control={control} name="phone" label={t('phoneOptional')} keyboardType="phone-pad" />
+      <FormField
+        control={control}
+        name="note"
         label={t('description')}
         placeholder={t('descriptionPlaceholder')}
-        value={note}
-        onChangeText={setNote}
       />
       {error ? <Txt style={{ color: palette.danger }}>{error}</Txt> : null}
-      <Button label={t('save')} onPress={save} loading={saving} />
+      <Button label={t('save')} onPress={onSubmit} loading={formState.isSubmitting} />
     </ScrollView>
   );
 }

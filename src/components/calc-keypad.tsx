@@ -1,9 +1,11 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { Delete, Eraser, ICON, Plus, type LucideIcon } from '@/components/icons';
 import type { CalcKey } from '@/domain/calc';
 import { usePalette } from '@/theme';
 
-const LABELS: Partial<Record<CalcKey, string>> = { back: '⌫', clear: 'C', '+': '+' };
+/** Operator keys are drawn with Lucide icons; digits stay as text. */
+const KEY_ICONS: Partial<Record<CalcKey, LucideIcon>> = { back: Delete, clear: Eraser, '+': Plus };
 
 /** Calculator keypad used instead of the system keyboard for amounts. */
 export function CalcKeypad({ onKey, allowDecimal }: { onKey: (key: CalcKey) => void; allowDecimal: boolean }) {
@@ -20,7 +22,8 @@ export function CalcKeypad({ onKey, allowDecimal }: { onKey: (key: CalcKey) => v
       {rows.map((row, r) => (
         <View key={r} style={styles.row}>
           {row.map((key) => {
-            const isOp = key === 'back' || key === 'clear' || key === '+';
+            const KeyIcon = KEY_ICONS[key];
+            const isOp = KeyIcon !== undefined;
             return (
               <Pressable
                 key={key}
@@ -34,7 +37,11 @@ export function CalcKeypad({ onKey, allowDecimal }: { onKey: (key: CalcKey) => v
                     borderColor: palette.border,
                   },
                 ]}>
-                <Text style={[styles.label, { color: isOp ? palette.primary : palette.text }]}>{LABELS[key] ?? key}</Text>
+                {KeyIcon ? (
+                  <KeyIcon size={ICON.lg} color={palette.primary} strokeWidth={2.25} />
+                ) : (
+                  <Text style={[styles.label, { color: palette.text }]}>{key}</Text>
+                )}
               </Pressable>
             );
           })}

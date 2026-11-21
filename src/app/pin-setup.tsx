@@ -4,7 +4,7 @@ import { Alert, View } from 'react-native';
 
 import { PinPad } from '@/components/pin-pad';
 import { savePin } from '@/security/pin';
-import { useApp } from '@/state/app-context';
+import { useApp } from '@/state/use-app';
 
 /** Two-step PIN creation: choose, then confirm. */
 export default function PinSetupScreen() {

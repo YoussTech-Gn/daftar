@@ -4,11 +4,23 @@ import { useCallback, useState } from 'react';
 import { Alert, FlatList, Linking, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import {
+  ArrowDown,
+  ArrowUp,
+  Banknote,
+  ICON,
+  MessageCircle,
+  Pencil,
+  Phone,
+  ShoppingCart,
+  Trash2,
+} from '@/components/icons';
 import { Button, Card, Row, Txt } from '@/components/ui';
 import { deleteCustomer, deleteEntry, getCustomer, listEntries } from '@/db/repository';
+import { itemLabel, itemsToNote } from '@/domain/calc';
 import { buildWhatsAppLink } from '@/domain/reminder';
 import type { CustomerWithBalance, Entry } from '@/domain/types';
-import { useApp } from '@/state/app-context';
+import { useApp } from '@/state/use-app';
 import { usePalette } from '@/theme';
 
 export default function CustomerScreen() {
@@ -36,6 +48,22 @@ export default function CustomerScreen() {
 
   const owes = customer.balance > 0;
   const balanceColor = owes ? palette.credit : customer.balance < 0 ? palette.payment : palette.muted;
+
+  function entryTitle(e: Entry): string {
+    if (e.kind === 'payment') return `${t('paymentEntry')} · ${t(`method_${e.method}`)}`;
+    if (e.creditType === 'cash') return t('creditCash');
+    if (e.creditType === 'goods') return t('creditGoods');
+    return t('creditEntry');
+  }
+
+  /** The free note without the auto-generated item summary (already shown line by line). */
+  function extraNote(e: Entry): string {
+    if (!e.note) return '';
+    const items = e.items ?? [];
+    if (items.length === 0) return e.note;
+    const summary = itemsToNote(items.map((i) => ({ name: i.name, price: i.unitPrice, qty: i.qty, unit: i.unit })));
+    return e.note.startsWith(summary) ? e.note.slice(summary.length).replace(/^\s*—\s*/, '') : e.note;
+  }
 
   function openEntry(kind: 'credit' | 'payment') {
     router.push({ pathname: '/entry/new', params: { customerId: String(customerId), kind } });
@@ -93,9 +121,12 @@ export default function CustomerScreen() {
             <Pressable
               hitSlop={12}
               onPress={() => router.push({ pathname: '/customer/form', params: { id: String(customerId) } })}>
-              <Txt weight="600" style={{ color: palette.primary }}>
-                {t('edit')}
-              </Txt>
+              <Row gap={6}>
+                <Pencil size={ICON.sm} color={palette.primary} />
+                <Txt weight="600" style={{ color: palette.primary }}>
+                  {t('edit')}
+                </Txt>
+              </Row>
             </Pressable>
           ),
         }}
@@ -123,19 +154,27 @@ export default function CustomerScreen() {
               ) : null}
             </Card>
             <Row gap={10}>
-              <Button label={`↑ ${t('gaveCredit')}`} variant="credit" onPress={() => openEntry('credit')} style={{ flex: 1 }} />
               <Button
-                label={`↓ ${t('receivedPayment')}`}
+                label={t('gaveCredit')}
+                icon={ArrowUp}
+                variant="credit"
+                onPress={() => openEntry('credit')}
+                style={{ flex: 1 }}
+              />
+              <Button
+                label={t('receivedPayment')}
+                icon={ArrowDown}
                 variant="payment"
                 onPress={() => openEntry('payment')}
                 style={{ flex: 1 }}
               />
             </Row>
             <Row gap={10}>
-              <Button label={t('remind')} variant="whatsapp" onPress={remind} style={{ flex: 1 }} />
+              <Button label={t('remind')} icon={MessageCircle} variant="whatsapp" onPress={remind} style={{ flex: 1 }} />
               {customer.phone ? (
                 <Button
                   label={t('call')}
+                  icon={Phone}
                   variant="secondary"
                   onPress={() => Linking.openURL(`tel:${customer.phone}`)}
                   style={{ flex: 1 }}
@@ -161,17 +200,35 @@ export default function CustomerScreen() {
                     justifyContent: 'center',
                     backgroundColor: item.kind === 'credit' ? palette.creditSoft : palette.paymentSoft,
                   }}>
-                  <Txt weight="800" style={{ color: item.kind === 'credit' ? palette.credit : palette.payment }}>
-                    {item.kind === 'credit' ? '↑' : '↓'}
-                  </Txt>
+                  {(() => {
+                    const EntryIcon =
+                      item.kind === 'payment'
+                        ? ArrowDown
+                        : item.creditType === 'cash'
+                          ? Banknote
+                          : item.creditType === 'goods'
+                            ? ShoppingCart
+                            : ArrowUp;
+                    return (
+                      <EntryIcon size={ICON.md} color={item.kind === 'credit' ? palette.credit : palette.payment} />
+                    );
+                  })()}
                 </View>
                 <View style={{ flex: 1, gap: 2 }}>
-                  <Txt weight="600">
-                    {item.kind === 'credit' ? t('creditEntry') : `${t('paymentEntry')} · ${t(`method_${item.method}`)}`}
-                  </Txt>
-                  {item.note ? (
+                  <Txt weight="600">{entryTitle(item)}</Txt>
+                  {(item.items ?? []).map((line, i) => (
+                    <Row key={i} style={{ justifyContent: 'space-between' }}>
+                      <Txt size={13} numberOfLines={1} style={{ flexShrink: 1 }}>
+                        {itemLabel({ name: line.name, price: line.unitPrice, qty: line.qty, unit: line.unit })}
+                      </Txt>
+                      <Txt size={13} muted>
+                        {money(line.total)}
+                      </Txt>
+                    </Row>
+                  ))}
+                  {extraNote(item) ? (
                     <Txt size={13} muted numberOfLines={2}>
-                      {item.note}
+                      {extraNote(item)}
                     </Txt>
                   ) : null}
                   <Txt size={12} muted>
@@ -189,7 +246,13 @@ export default function CustomerScreen() {
           </Pressable>
         )}
         ListFooterComponent={
-          <Button label={t('delete')} variant="danger" onPress={confirmDeleteCustomer} style={{ marginTop: 24 }} />
+          <Button
+            label={t('delete')}
+            icon={Trash2}
+            variant="danger"
+            onPress={confirmDeleteCustomer}
+            style={{ marginTop: 24 }}
+          />
         }
       />
     </SafeAreaView>

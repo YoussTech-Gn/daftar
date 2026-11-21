@@ -40,6 +40,22 @@ const MIGRATIONS: string[] = [
     created_at INTEGER NOT NULL
   );
   `,
+  // v3 — units, cash vs goods, items per entry (decision 0009)
+  `
+  ALTER TABLE products ADD COLUMN unit TEXT NOT NULL DEFAULT 'piece';
+  ALTER TABLE entries ADD COLUMN credit_type TEXT;
+  CREATE TABLE IF NOT EXISTS entry_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    entry_id INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+    product_id INTEGER,
+    name TEXT NOT NULL,
+    unit TEXT NOT NULL,
+    qty REAL NOT NULL CHECK (qty > 0),
+    unit_price INTEGER NOT NULL,
+    total INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_entry_items_entry ON entry_items(entry_id);
+  `,
 ];
 
 export async function migrate(db: SQLiteDatabase): Promise<void> {
