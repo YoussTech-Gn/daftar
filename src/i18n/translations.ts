@@ -7,6 +7,19 @@ export const LANGUAGES: { code: Language; label: string; rtl: boolean }[] = [
 ];
 
 const en = {
+  recoveryTitle: 'Your recovery code',
+  recoveryBody: 'Write it in your paper notebook or keep it somewhere safe. If you forget your PIN, this code is the only way back in. It is shown only now.',
+  recoveryWritten: 'I wrote it down',
+  forgotPin: 'Forgot PIN?',
+  recoveryEnterTitle: 'Enter your recovery code',
+  recoveryEnterHint: 'The 12-character code shown when you set your PIN (XXXX-XXXX-XXXX).',
+  recoveryWrong: 'This code is not correct.',
+  recoveryUnlock: 'Check the code',
+  backToPin: 'Back to PIN',
+  recoveryNone: 'No recovery code was created on this phone, so the PIN cannot be reset. Your ledger is still safe here: try again calmly, or reinstall Daftar and restore your last backup file.',
+  recoveryNewPinTitle: 'Code accepted. Choose a new PIN.',
+  newRecoveryCode: 'New recovery code',
+  recoveryMissingHint: 'No recovery code yet. Create one in case you forget your PIN.',
   openingBalance: 'Already owes (from the paper notebook)',
   openingBalanceHint: 'Optional. Kept as an old debt, not counted in today’s credit.',
   openingBalanceEntry: 'Old debt (paper notebook)',
@@ -244,6 +257,19 @@ export type TranslationKey = keyof typeof en;
 type Dictionary = Record<TranslationKey, string>;
 
 const fr: Dictionary = {
+  recoveryTitle: 'Votre code de secours',
+  recoveryBody: 'Écrivez-le dans votre cahier ou gardez-le en lieu sûr. Si vous oubliez votre code PIN, c’est le seul moyen de rouvrir Daftar. Il n’est affiché qu’une fois.',
+  recoveryWritten: 'Je l’ai noté',
+  forgotPin: 'Code PIN oublié ?',
+  recoveryEnterTitle: 'Entrez votre code de secours',
+  recoveryEnterHint: 'Le code de 12 caractères affiché lors de la création du PIN (XXXX-XXXX-XXXX).',
+  recoveryWrong: 'Ce code n’est pas correct.',
+  recoveryUnlock: 'Vérifier le code',
+  backToPin: 'Retour au code PIN',
+  recoveryNone: 'Aucun code de secours n’a été créé sur ce téléphone : le code PIN ne peut pas être réinitialisé. Vos données restent ici en sécurité : réessayez calmement, ou réinstallez Daftar et restaurez votre dernière sauvegarde.',
+  recoveryNewPinTitle: 'Code accepté. Choisissez un nouveau code PIN.',
+  newRecoveryCode: 'Nouveau code de secours',
+  recoveryMissingHint: 'Pas encore de code de secours. Créez-en un au cas où vous oublieriez votre PIN.',
   openingBalance: 'Doit déjà (ancien cahier)',
   openingBalanceHint: 'Facultatif. Enregistré comme ancienne dette, pas compté dans les crédits du jour.',
   openingBalanceEntry: 'Ancienne dette (cahier)',
@@ -466,6 +492,19 @@ const fr: Dictionary = {
 };
 
 const ar: Dictionary = {
+  recoveryTitle: 'رمز الاسترداد الخاص بك',
+  recoveryBody: 'اكتبه في دفترك الورقي أو احفظه في مكان آمن. إذا نسيت الرمز السري، فهذا الرمز هو الطريقة الوحيدة لفتح دفتر. لن يظهر مرة أخرى.',
+  recoveryWritten: 'كتبته',
+  forgotPin: 'نسيت الرمز السري؟',
+  recoveryEnterTitle: 'أدخل رمز الاسترداد',
+  recoveryEnterHint: 'الرمز المكوّن من 12 خانة الذي ظهر عند إنشاء الرمز السري (XXXX-XXXX-XXXX).',
+  recoveryWrong: 'هذا الرمز غير صحيح.',
+  recoveryUnlock: 'تحقق من الرمز',
+  backToPin: 'العودة إلى الرمز السري',
+  recoveryNone: 'لم يُنشأ رمز استرداد على هذا الهاتف، لذلك لا يمكن إعادة تعيين الرمز السري. بياناتك ما زالت محفوظة هنا: حاول مرة أخرى بهدوء، أو أعد تثبيت دفتر واسترجع آخر نسخة احتياطية.',
+  recoveryNewPinTitle: 'الرمز صحيح. اختر رمزاً سرياً جديداً.',
+  newRecoveryCode: 'رمز استرداد جديد',
+  recoveryMissingHint: 'لا يوجد رمز استرداد بعد. أنشئ واحداً تحسباً لنسيان الرمز السري.',
   openingBalance: 'عليه دين سابق (من الدفتر الورقي)',
   openingBalanceHint: 'اختياري. يُسجَّل كدين قديم ولا يُحسب ضمن ديون اليوم.',
   openingBalanceEntry: 'دين سابق (الدفتر الورقي)',

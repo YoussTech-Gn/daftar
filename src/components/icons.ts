@@ -31,6 +31,7 @@ export {
   HeartHandshake,
   History,
   House,
+  KeyRound,
   Info,
   Languages,
   Lock,

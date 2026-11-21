@@ -29,6 +29,7 @@ import {
   Lock,
   LockKeyhole,
   LockKeyholeOpen,
+  KeyRound,
   ShoppingBasket,
   Store,
   Trash2,
@@ -41,7 +42,7 @@ import { shopSchema, type ShopFormValues } from '@/domain/schemas';
 import { LANGUAGES } from '@/i18n/translations';
 import { importAll, pickBackup, shareBackup, shareCsv } from '@/lib/export';
 import { haptic } from '@/lib/haptics';
-import { hasPin, removePin } from '@/security/pin';
+import { hasPin, hasRecoveryCode, removePin } from '@/security/pin';
 import { useSessionStore } from '@/state/session-store';
 import { useApp } from '@/state/use-app';
 import { useTheme } from '@/theme';
@@ -179,6 +180,7 @@ export default function MoreScreen() {
   const showToast = useSessionStore((s) => s.showToast);
 
   const [pinOn, setPinOn] = useState(false);
+  const [recoveryOn, setRecoveryOn] = useState(true);
   const [productCount, setProductCount] = useState(0);
   const [trashCount, setTrashCount] = useState(0);
   const [sheet, setSheet] = useState<SheetKind>(null);
@@ -193,6 +195,7 @@ export default function MoreScreen() {
   useFocusEffect(
     useCallback(() => {
       hasPin().then(setPinOn);
+      hasRecoveryCode().then(setRecoveryOn);
       listProducts(db).then((p) => setProductCount(p.length));
       listTrash(db).then((tr) => setTrashCount(tr.length));
     }, [db]),
@@ -412,6 +415,20 @@ export default function MoreScreen() {
       {/* PIN options sheet (when PIN is active) */}
       <SettingsSheet visible={sheet === 'pin'} title={t('security')} onClose={() => setSheet(null)}>
         <View style={styles.sheetBody}>
+          {!recoveryOn ? (
+            <DaftarText role="caption" tone="secondary">
+              {t('recoveryMissingHint')}
+            </DaftarText>
+          ) : null}
+          <DaftarButton
+            label={t('newRecoveryCode')}
+            icon={KeyRound}
+            variant={recoveryOn ? 'secondary' : 'primary'}
+            onPress={() => {
+              setSheet(null);
+              router.push('/recovery-code');
+            }}
+          />
           <DaftarButton
             label={t('changePin')}
             icon={LockKeyhole}

@@ -39,7 +39,7 @@
 
 ## Next — from the external review (decision 0016)
 - [ ] Read-only entry detail sheet (items, method, who cancelled and why)
-- [ ] Forgot PIN: recovery code shown once at PIN setup
+- [x] Forgot PIN: recovery code shown once at PIN setup (decision 0017)
 - [ ] Motion: sliding tab indicator, money-direction cue, own forgive animation, list → customer transition
 - [ ] Setting "ask for a receipt after each entry"
 

@@ -103,6 +103,7 @@ function Gate({ fontsReady }: { fontsReady: boolean }) {
           <Stack.Screen name="trash" options={{ title: t('trash') }} />
           <Stack.Screen name="activity" options={{ title: t('activity') }} />
           <Stack.Screen name="pin-setup" options={{ presentation: 'modal', title: t('security') }} />
+          <Stack.Screen name="recovery-code" options={{ presentation: 'modal', title: t('security') }} />
         </Stack>
       )}
       <ExitToast />
