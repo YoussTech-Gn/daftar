@@ -104,6 +104,7 @@ export function Sheet({
   children: ReactNode;
 }) {
   const insets = useSafeAreaInsets();
+  const { isRTL } = useApp();
   return (
     <Modal visible={visible} transparent animationType="slide" statusBarTranslucent onRequestClose={onClose}>
       <View className="flex-1 justify-end">
@@ -113,7 +114,7 @@ export function Sheet({
           style={{ paddingBottom: Math.max(insets.bottom, 12) + 8 }}>
           <View className="mb-2 h-1 w-10 self-center rounded-full bg-surface-muted" />
           {title ? (
-            <Txt weight="700" className="mb-3 text-lg">
+            <Txt weight="700" className="mb-3 text-lg" style={{ textAlign: isRTL ? 'right' : 'left' }}>
               {title}
             </Txt>
           ) : null}

@@ -143,7 +143,7 @@ function OperationForm({
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerClassName={`gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          contentContainerClassName={`grow gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
           {chips.map((c) => {
             const active = c.id === customerId;
             return (

@@ -146,7 +146,7 @@ export default function CustomersScreen() {
                   {[c.note, c.phone].filter(Boolean).join(' · ') || ' '}
                 </Txt>
               </View>
-              <View className="items-end gap-0.5">
+              <View className={`gap-0.5 ${isRTL ? 'items-start' : 'items-end'}`}>
                 {c.balance === 0 ? (
                   <Txt weight="600" className="text-xs text-ink-3">
                     {t('settled')}

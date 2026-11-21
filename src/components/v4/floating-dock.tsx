@@ -69,7 +69,7 @@ export function FloatingDock({ state, descriptors, emitter, navigateToTab }: Tab
                   }
                 }}
                 className="h-full flex-1 items-center justify-center gap-0.5">
-                <View className={`rounded-full px-3 py-1 ${focused ? 'bg-accent-soft' : ''}`}>
+                <View className={`rounded-2xl px-3 py-1 ${focused ? 'bg-accent-soft' : ''}`}>
                   <Icon
                     size={ICON_SCALE.md.size}
                     color={focused ? v4(scheme, 'accent') : colors.textSecondary}
