@@ -1,56 +1,63 @@
-# Welcome to your Expo app 👋
+# Daftar — the shop credit notebook, in your pocket
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Daftar ("notebook" in Arabic) is an **offline-first credit ledger** for corner shops and small merchants
+in francophone West Africa and the Arabic-speaking world. It replaces the paper *crédit cahier* / *karni*.
 
-## Get started
+- 📒 Customers with live balances (who owes you, who has an advance)
+- ↑ / ↓ Two-tap entries: **credit given** and **payment received** (cash, Wave, Orange Money, MTN MoMo, other)
+- 💬 **WhatsApp reminders** with a polite pre-filled message in the shop's language
+- 🌍 **French, Arabic (RTL) and English**; currencies GNF, XOF, XAF, MAD, DZD, TND, EGP, MRU, NGN, EUR, USD
+- 🔒 Optional **4-digit PIN lock** (hashed, kept in the device secure store; relocks after 30 s in background)
+- 💾 **Your data is yours**: CSV export, JSON backup and restore — no account, no server, works offline
+- 🌓 Light and dark mode
 
-1. Install dependencies
+The app never holds or moves money — it only records it.
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Run it in Expo Go
 
 ```bash
-npm run reset-project
+cd daftar
+npm install
+npx expo start
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+Scan the QR code with **Expo Go** (Android) or the Camera app (iOS).
 
-### Other setup steps
+## Scripts
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+| Command | What it does |
+|---|---|
+| `npm start` | Start the Expo dev server |
+| `npm test` | Unit tests (Jest + `jest-expo`) |
+| `npm run typecheck` | TypeScript check (`tsc --noEmit`) |
+| `npm run lint` | ESLint (`expo lint`) |
 
-## Learn more
+## Project structure
 
-To learn more about developing your project with Expo, look at the following resources:
+```
+src/
+  app/                Expo Router screens (file = route)
+    _layout.tsx       DB provider, settings provider, onboarding / PIN gate, stack
+    index.tsx         Home: totals, customer list, search
+    customer/[id].tsx Customer ledger, credit / payment buttons, WhatsApp reminder
+    customer/form.tsx Add / edit customer (modal)
+    entry/new.tsx     New credit or payment (modal)
+    settings.tsx      Shop, language, currency, PIN, export / backup / restore
+    pin-setup.tsx     Choose + confirm PIN (modal)
+  components/         UI kit (RTL-aware Txt / Row, Button, Field, Chip, Avatar, PinPad)
+  db/                 SQLite migrations + repository (all SQL lives here)
+  domain/             Pure logic: types, currency, reminders, CSV, plan limits (+ tests)
+  i18n/               FR / AR / EN dictionaries (typed keys)
+  lib/                File export / share / restore
+  screens/            Non-route screens (onboarding, lock)
+  security/           PIN hashing (expo-crypto) + storage (expo-secure-store)
+  state/              App settings context (language, currency, shop, i18n helpers)
+docs/
+  decisions/          One file per technical / product decision
+  prompts/            One file per prompt that shaped this project
+  ROADMAP.md          Night-by-night roadmap
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Key technical choices
+See `docs/decisions/`. In short: Expo SDK 58 + Expo Router + strict TypeScript, `expo-sqlite`
+with versioned migrations, money stored as **integer minor units**, no backend.
