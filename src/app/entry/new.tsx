@@ -3,7 +3,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import { ScrollView, TextInput, View } from 'react-native';
 
-import { Button, Chip, Field, Txt } from '@/components/ui';
+import { Button, Chip, ChipRow, Field, Txt } from '@/components/ui';
 import { addEntry } from '@/db/repository';
 import { getCurrency, parseAmount } from '@/domain/currency';
 import { PAYMENT_METHODS, type EntryKind, type PaymentMethod } from '@/domain/types';
@@ -78,11 +78,11 @@ export default function NewEntryScreen() {
           <Txt size={14} muted weight="600">
             {t('method')}
           </Txt>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          <ChipRow>
             {PAYMENT_METHODS.map((m) => (
               <Chip key={m} label={t(`method_${m}`)} selected={method === m} onPress={() => setMethod(m)} />
             ))}
-          </View>
+          </ChipRow>
         </View>
       ) : null}
       <Field label={t('note')} placeholder={t('notePlaceholder')} value={note} onChangeText={setNote} />

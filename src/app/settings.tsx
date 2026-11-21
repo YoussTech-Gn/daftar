@@ -2,9 +2,9 @@ import Constants from 'expo-constants';
 import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
-import { Alert, ScrollView, View } from 'react-native';
+import { Alert, ScrollView } from 'react-native';
 
-import { Button, Card, Chip, Field, Txt } from '@/components/ui';
+import { Button, Card, Chip, ChipRow, Field, Txt } from '@/components/ui';
 import { CURRENCIES } from '@/domain/currency';
 import { LANGUAGES } from '@/i18n/translations';
 import { importAll, pickBackup, shareBackup, shareCsv } from '@/lib/export';
@@ -74,7 +74,7 @@ export default function SettingsScreen() {
           onEndEditing={() => updateSettings({ countryCode: countryCode.replace(/\D/g, '') })}
         />
         <Txt weight="600">{t('chooseLanguage')}</Txt>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        <ChipRow>
           {LANGUAGES.map((l) => (
             <Chip
               key={l.code}
@@ -83,9 +83,9 @@ export default function SettingsScreen() {
               onPress={() => updateSettings({ language: l.code })}
             />
           ))}
-        </View>
+        </ChipRow>
         <Txt weight="600">{t('chooseCurrency')}</Txt>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        <ChipRow>
           {CURRENCIES.map((c) => (
             <Chip
               key={c.code}
@@ -94,7 +94,7 @@ export default function SettingsScreen() {
               onPress={() => updateSettings({ currency: c.code })}
             />
           ))}
-        </View>
+        </ChipRow>
       </Card>
 
       <Card style={{ gap: 12 }}>

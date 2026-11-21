@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, Chip, Field, Txt } from '@/components/ui';
+import { Button, Chip, ChipRow, Field, Txt } from '@/components/ui';
 import { CURRENCIES } from '@/domain/currency';
 import { LANGUAGES } from '@/i18n/translations';
 import { useApp } from '@/state/app-context';
@@ -40,7 +40,7 @@ export function OnboardingScreen() {
 
           <View style={{ gap: 10 }}>
             <Txt weight="600">{t('chooseLanguage')}</Txt>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            <ChipRow>
               {LANGUAGES.map((l) => (
                 <Chip
                   key={l.code}
@@ -49,12 +49,12 @@ export function OnboardingScreen() {
                   onPress={() => updateSettings({ language: l.code })}
                 />
               ))}
-            </View>
+            </ChipRow>
           </View>
 
           <View style={{ gap: 10 }}>
             <Txt weight="600">{t('chooseCurrency')}</Txt>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            <ChipRow>
               {CURRENCIES.map((c) => (
                 <Chip
                   key={c.code}
@@ -63,7 +63,7 @@ export function OnboardingScreen() {
                   onPress={() => updateSettings({ currency: c.code })}
                 />
               ))}
-            </View>
+            </ChipRow>
           </View>
 
           <Field

@@ -14,6 +14,8 @@ const light = {
   paymentSoft: '#E3F5E8',
   danger: '#B91C1C',
   whatsapp: '#25D366',
+  /** Text on solid credit / payment buttons. */
+  onAccent: '#FFFFFF',
 };
 
 export type Palette = typeof light;
@@ -32,6 +34,7 @@ const dark: Palette = {
   paymentSoft: '#15301F',
   danger: '#F87171',
   whatsapp: '#25D366',
+  onAccent: '#111A15',
 };
 
 export function usePalette(): Palette {

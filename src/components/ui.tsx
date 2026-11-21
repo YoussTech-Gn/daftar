@@ -51,6 +51,12 @@ export function Row({ children, style, gap = 8 }: { children: ReactNode; style?:
   );
 }
 
+/** Wrapping row of chips that starts from the right in RTL languages. */
+export function ChipRow({ children }: { children: ReactNode }) {
+  const { isRTL } = useApp();
+  return <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', flexWrap: 'wrap', gap: 8 }}>{children}</View>;
+}
+
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   const palette = usePalette();
   return (
@@ -79,8 +85,8 @@ export function Button({
   const colors: Record<ButtonVariant, { bg: string; fg: string; border?: string }> = {
     primary: { bg: palette.primary, fg: palette.primaryText },
     secondary: { bg: palette.card, fg: palette.text, border: palette.border },
-    credit: { bg: palette.credit, fg: '#FFFFFF' },
-    payment: { bg: palette.payment, fg: '#FFFFFF' },
+    credit: { bg: palette.credit, fg: palette.onAccent },
+    payment: { bg: palette.payment, fg: palette.onAccent },
     danger: { bg: palette.card, fg: palette.danger, border: palette.danger },
     whatsapp: { bg: palette.whatsapp, fg: '#06250F' },
   };
