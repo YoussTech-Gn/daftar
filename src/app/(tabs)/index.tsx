@@ -4,15 +4,16 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AmountDisplay } from '@/components/ui';
+import { AmountDisplay, UndoBar5s } from '@/components/ui';
 import { DOCK_SPACE } from '@/components/v4/floating-dock';
 import { ActivityRow, PrivacyEye } from '@/components/v4/ledger-bits';
 import { Glass, Pill, Txt } from '@/components/v4/primitives';
-import { getPeriodReport, getSummary, listRecentEntries, type RecentEntry } from '@/db/repository';
+import { cancelEntry, getPeriodReport, getSummary, listRecentEntries, restoreEntry, type RecentEntry } from '@/db/repository';
 import { collectedRatio, monthRange } from '@/domain/report';
 import type { Summary } from '@/domain/types';
 import { haptic } from '@/lib/haptics';
 import { useDoubleBackToExit } from '@/lib/use-double-back';
+import { useSessionStore } from '@/state/session-store';
 import { useApp } from '@/state/use-app';
 import { useLedgerReload } from '@/state/use-ledger-reload';
 import { useTheme } from '@/theme';
@@ -38,6 +39,8 @@ export default function HomeScreen() {
   const [ratio, setRatio] = useState(0);
   const [recent, setRecent] = useState<RecentEntry[]>([]);
   const [hideCancelled, setHideCancelled] = useState(false);
+  const [undo, setUndo] = useState<{ message: string; run: () => Promise<void> } | null>(null);
+  const bumpLedger = useSessionStore((s) => s.bumpLedger);
 
   useDoubleBackToExit(t('pressBackAgain'));
 
@@ -57,6 +60,26 @@ export default function HomeScreen() {
     return hideCancelled ? active : [...active, ...cancelled];
   }, [recent, hideCancelled]);
   const cancelledCount = recent.length - recent.filter((e) => e.cancelledAt === null).length;
+
+  async function applyShortcut(entry: RecentEntry) {
+    if (entry.cancelledAt) {
+      await restoreEntry(db, entry);
+      haptic.success();
+    } else {
+      await cancelEntry(db, entry);
+      haptic.warning();
+      setUndo({
+        message: t('entryCancelled'),
+        run: async () => {
+          await restoreEntry(db, entry);
+          bumpLedger();
+          await load();
+        },
+      });
+    }
+    bumpLedger();
+    await load();
+  }
 
   const shop = settings.shopName || t('appName');
   const dir = isRTL ? 'flex-row-reverse' : 'flex-row';
@@ -160,11 +183,13 @@ export default function HomeScreen() {
                 entry={e}
                 last={i === rows.length - 1}
                 onPress={() => router.push({ pathname: '/customer/[id]', params: { id: String(e.customerId) } })}
+                onAction={() => applyShortcut(e)}
               />
             ))
           )}
         </Glass>
       </ScrollView>
+      {undo ? <UndoBar5s message={undo.message} onUndo={() => undo.run()} onHide={() => setUndo(null)} bottomOffset={120} /> : null}
     </SafeAreaView>
   );
 }

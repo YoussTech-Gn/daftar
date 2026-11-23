@@ -47,6 +47,15 @@ export function avatarTintIndex(seed: string, paletteSize: number): number {
   return (h >>> 0) % size;
 }
 
+/**
+ * One shortcut per ledger row, so a swipe and a press never disagree.
+ * A live entry — including a payment that cleared the balance — only offers delete.
+ * A cancelled entry only offers restore.
+ */
+export function rowShortcut(cancelled: boolean): 'delete' | 'restore' {
+  return cancelled ? 'restore' : 'delete';
+}
+
 /** Prefer the customer id so a rename, or a shared name, does not recolour the avatar. */
 export function avatarSeed(id: number | string | undefined, name: string): string {
   if (id !== undefined && id !== null && String(id) !== '') return `id:${id}`;

@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Donut } from '@/components/donut';
 import { AmountDisplay, Avatar } from '@/components/ui';
 import { DOCK_SPACE } from '@/components/v4/floating-dock';
 import { Glass, Txt } from '@/components/v4/primitives';
@@ -15,9 +16,42 @@ import { useApp } from '@/state/use-app';
 import { useLedgerReload } from '@/state/use-ledger-reload';
 import { useTheme } from '@/theme';
 
+/** One labelled bar. Width is the share of the larger of the two month totals. */
+function MonthBar({
+  label,
+  amount,
+  max,
+  color,
+  amountColor,
+  isRTL,
+}: {
+  label: string;
+  amount: number;
+  max: number;
+  color: string;
+  amountColor: string;
+  isRTL: boolean;
+}) {
+  const width = `${Math.max(6, Math.round((amount / max) * 100))}%`;
+  const dir = isRTL ? 'flex-row-reverse' : 'flex-row';
+  const align = isRTL ? 'right' : 'left';
+  return (
+    <View className="gap-1.5">
+      <View className={`items-center justify-between ${dir}`}>
+        <Txt weight="600" className="text-sm" style={{ textAlign: align }}>
+          {label}
+        </Txt>
+        <AmountDisplay amount={amount} size="label" color={amountColor} />
+      </View>
+      <View className="h-3 overflow-hidden rounded-full bg-surface-muted">
+        <View className="h-full rounded-full" style={{ width, backgroundColor: color, alignSelf: isRTL ? 'flex-end' : 'flex-start' }} />
+      </View>
+    </View>
+  );
+}
+
 /**
- * 03 · Rapports — simplified merchant view (V4, decision 0018):
- * recovery health, two monthly KPIs, "to collect now" list with inline Encaisser, forgiveness footnote.
+ * 03 · Rapports — recovery ring plus this month as two bars on one scale.
  */
 export default function ReportsScreen() {
   const db = useSQLiteContext();
@@ -52,23 +86,18 @@ export default function ReportsScreen() {
           {t('tabReports')}
         </Txt>
 
-        {/* 1 · Recovery health */}
-        <Glass className="gap-3 p-5">
-          <View className={`items-end justify-between ${dir}`}>
-            <Txt weight="600" className="text-sm text-ink-2">
-              {t('moneyRecovered')}
-            </Txt>
-            <Txt weight="800" numeric className="text-3xl text-payment">
-              {`${Math.round(ratio * 100)}%`}
-            </Txt>
-          </View>
-          <View className="h-2.5 overflow-hidden rounded-full bg-surface-muted">
-            <View
-              className="h-full rounded-full bg-payment"
-              style={{ width: `${Math.round(ratio * 100)}%`, alignSelf: isRTL ? 'flex-end' : 'flex-start' }}
-            />
-          </View>
-          <View className={`items-center justify-between ${dir}`}>
+        {/* 1 · Recovery chart — the ring already used by the app, not a new visual language. */}
+        <Glass className="items-center gap-4 p-5">
+          <Donut
+            ratio={ratio}
+            size={156}
+            stroke={16}
+            color={colors.payment}
+            track={colors.surfaceSunken}
+            label={`${Math.round(ratio * 100)}%`}
+            sublabel={t('moneyRecovered')}
+          />
+          <View className={`w-full items-center justify-between ${dir}`}>
             <Txt className="text-sm text-ink-2">{t('leftToRecover')}</Txt>
             <AmountDisplay amount={report?.outstanding ?? 0} size="heading" color={colors.creditDeep} />
           </View>
@@ -79,27 +108,28 @@ export default function ReportsScreen() {
           ) : null}
         </Glass>
 
-        {/* 2 · Monthly KPIs */}
-        <View className={`gap-3 ${dir}`}>
-          <Glass className="flex-1 gap-1.5 p-4">
-            <Txt weight="600" className="text-xs text-credit" style={{ textAlign: align }}>
-              {t('kpiGiven')}
-            </Txt>
-            <AmountDisplay amount={report?.creditGiven ?? 0} size="heading" color={colors.creditDeep} align={align} />
-            <Txt className="text-[11px] text-ink-3" style={{ textAlign: align }}>
-              {t('thisMonth')}
-            </Txt>
-          </Glass>
-          <Glass className="flex-1 gap-1.5 p-4">
-            <Txt weight="600" className="text-xs text-payment" style={{ textAlign: align }}>
-              {t('kpiCollected')}
-            </Txt>
-            <AmountDisplay amount={report?.collected ?? 0} size="heading" color={colors.paymentDeep} align={align} />
-            <Txt className="text-[11px] text-ink-3" style={{ textAlign: align }}>
-              {t('thisMonth')}
-            </Txt>
-          </Glass>
-        </View>
+        {/* 2 · This month, as two bars on one scale */}
+        <Glass className="gap-4 p-5">
+          <Txt weight="700" className="text-base" style={{ textAlign: align }}>
+            {t('thisMonth')}
+          </Txt>
+          <MonthBar
+            label={t('kpiGiven')}
+            amount={report?.creditGiven ?? 0}
+            max={Math.max(report?.creditGiven ?? 0, report?.collected ?? 0, 1)}
+            color={colors.credit}
+            amountColor={colors.creditDeep}
+            isRTL={isRTL}
+          />
+          <MonthBar
+            label={t('kpiCollected')}
+            amount={report?.collected ?? 0}
+            max={Math.max(report?.creditGiven ?? 0, report?.collected ?? 0, 1)}
+            color={colors.payment}
+            amountColor={colors.paymentDeep}
+            isRTL={isRTL}
+          />
+        </Glass>
 
         {/* 3 · To collect now */}
         <Glass>

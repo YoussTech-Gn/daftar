@@ -81,6 +81,7 @@ export default function CustomerScreen() {
   const { t, money, settings, isRTL } = useApp();
   const { colors, shadows } = useTheme();
   const showToast = useSessionStore((s) => s.showToast);
+  const bumpLedger = useSessionStore((s) => s.bumpLedger);
   const lastSavedEntry = useSessionStore((s) => s.lastSavedEntry);
   const clearSavedEntry = useSessionStore((s) => s.clearSavedEntry);
 
@@ -94,8 +95,6 @@ export default function CustomerScreen() {
 
   const [forgiveDialogOpen, setForgiveDialogOpen] = useState(false);
   const [trashDialogOpen, setTrashDialogOpen] = useState(false);
-  const [entryDialog, setEntryDialog] = useState<{ entry: Entry; mode: 'cancel' | 'restore' } | null>(null);
-
   const [forgiveHighlightId, setForgiveHighlightId] = useState<number | null>(null);
   const [stampAmount, setStampAmount] = useState<number | null>(null);
   const [pendingReceipt, setPendingReceipt] = useState<ReceiptPayload | null>(null);
@@ -237,25 +236,24 @@ export default function CustomerScreen() {
     router.back();
   }
 
-  async function executeEntryDialog() {
-    if (!entryDialog) return;
-    const { entry, mode } = entryDialog;
-    setEntryDialog(null);
-
-    if (mode === 'restore') {
+  async function applyShortcut(entry: Entry) {
+    if (inTrash) return;
+    if (entry.cancelledAt) {
       await restoreEntry(db, entry);
       haptic.success();
+      bumpLedger();
       await load();
       return;
     }
-
     await cancelEntry(db, entry);
     haptic.warning();
+    bumpLedger();
     await load();
     setUndo({
       message: t('entryCancelled'),
       run: async () => {
         await restoreEntry(db, entry);
+        bumpLedger();
         await load();
       },
     });
@@ -442,16 +440,16 @@ export default function CustomerScreen() {
               timestampLabel={shortStamp(item.createdAt, settings.language)}
               cancelled={item.cancelledAt != null}
               highlightMode={highlightMode}
+              onShortcut={inTrash ? undefined : () => applyShortcut(item)}
+              onPress={
+                !inTrash && item.cancelledAt
+                  ? () => applyShortcut(item)
+                  : undefined
+              }
               onLongPress={
-                inTrash
+                inTrash || item.cancelledAt
                   ? undefined
-                  : () => {
-                      haptic.selection();
-                      setEntryDialog({
-                        entry: item,
-                        mode: item.cancelledAt ? 'restore' : 'cancel',
-                      });
-                    }
+                  : () => applyShortcut(item)
               }
             />
           );
@@ -522,18 +520,6 @@ export default function CustomerScreen() {
         icon="trash"
         onCancel={() => setTrashDialogOpen(false)}
         onConfirm={executeTrash}
-      />
-
-      <ConfirmationDialog
-        visible={entryDialog !== null}
-        title={entryDialog?.mode === 'restore' ? t('restoreEntryTitle') : t('cancelEntryTitle')}
-        body={entryDialog?.mode === 'restore' ? t('restoreEntryBody') : t('cancelEntryBody')}
-        confirmLabel={entryDialog?.mode === 'restore' ? t('restore') : t('cancelEntry')}
-        cancelLabel={entryDialog?.mode === 'restore' ? t('cancel') : t('keep')}
-        tone={entryDialog?.mode === 'restore' ? 'primary' : 'danger'}
-        icon={entryDialog?.mode === 'restore' ? 'restore' : 'cancel'}
-        onCancel={() => setEntryDialog(null)}
-        onConfirm={executeEntryDialog}
       />
 
       <StampSaveOverlay

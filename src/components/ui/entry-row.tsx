@@ -24,6 +24,7 @@ import type { EntryItem, EntryKind, CreditType, PaymentMethod } from '@/domain/t
 import { useApp } from '@/state/use-app';
 import { DURATION, EASING, usePressScale, useTheme } from '@/theme';
 import { AmountDisplay } from './amount-display';
+import { SwipeActionRow } from './swipe-action';
 import { DaftarText, Row } from './text';
 
 export interface EntryRowProps {
@@ -42,6 +43,8 @@ export interface EntryRowProps {
   highlightMode?: 'credit' | 'payment' | 'forgiven' | null;
   onPress?: () => void;
   onLongPress?: () => void;
+  /** Left-edge shortcut. Live entry: delete. Cancelled entry: restore. */
+  onShortcut?: () => void;
 }
 
 /**
@@ -61,6 +64,7 @@ export function EntryRow({
   highlightMode = null,
   onPress,
   onLongPress,
+  onShortcut,
 }: EntryRowProps) {
   const { colors, shadows } = useTheme();
   const { t, isRTL } = useApp();
@@ -169,8 +173,7 @@ export function EntryRow({
         : { bg: colors.creditSoft, fg: colors.creditDeep };
 
   const interactive = Boolean(onPress || onLongPress);
-
-  return (
+  const row = (
     <Animated.View style={pressStyle}>
       <Pressable
         disabled={!interactive}
@@ -264,6 +267,13 @@ export function EntryRow({
         </Animated.View>
       </Pressable>
     </Animated.View>
+  );
+
+  if (!onShortcut) return row;
+  return (
+    <SwipeActionRow cancelled={cancelled} onAction={onShortcut}>
+      {row}
+    </SwipeActionRow>
   );
 }
 

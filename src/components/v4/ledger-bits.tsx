@@ -11,7 +11,7 @@ import {
   ICON_SCALE,
   type LucideIcon,
 } from '@/components/icons';
-import { AmountDisplay } from '@/components/ui';
+import { AmountDisplay, SwipeActionRow } from '@/components/ui';
 import type { RecentEntry } from '@/db/repository';
 import { dayGroup } from '@/domain/report';
 import { haptic } from '@/lib/haptics';
@@ -60,8 +60,22 @@ const SOFT_BG = {
   'text-muted': 'bg-surface-muted',
 } as const;
 
-/** One row of the unified activity panel. Cancelled entries: muted and struck through. */
-export function ActivityRow({ entry, onPress, last }: { entry: RecentEntry; onPress: () => void; last: boolean }) {
+/**
+ * One row of the unified activity panel.
+ * Pull from the left: Delete on a live entry, Restore on a cancelled one.
+ * A tap on a cancelled row does that same restore. A tap on a live row opens the customer.
+ */
+export function ActivityRow({
+  entry,
+  onPress,
+  onAction,
+  last,
+}: {
+  entry: RecentEntry;
+  onPress: () => void;
+  onAction: () => void;
+  last: boolean;
+}) {
   const { t, settings, isRTL } = useApp();
   const { colors, scheme } = useTheme();
   const cancelled = entry.cancelledAt !== null;
@@ -98,10 +112,12 @@ export function ActivityRow({ entry, onPress, last }: { entry: RecentEntry; onPr
         : colors.forgiven;
 
   return (
+    <SwipeActionRow cancelled={cancelled} onAction={onAction}>
     <Pressable
       accessibilityRole="button"
-      onPress={onPress}
-      className={`min-h-[64px] items-center gap-3 px-4 py-3 active:bg-surface-muted ${last ? '' : 'border-b border-line'} ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+      accessibilityHint={cancelled ? t('restore') : t('delete')}
+      onPress={cancelled ? onAction : onPress}
+      className={`min-h-[64px] items-center gap-3 bg-surface px-4 py-3 active:bg-surface-muted ${last ? '' : 'border-b border-line'} ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
       <View className={`h-10 w-10 items-center justify-center rounded-xl ${SOFT_BG[tone]}`}>
         <Icon size={ICON_SCALE.sm.size} color={v4(scheme, tone)} />
       </View>
@@ -119,5 +135,6 @@ export function ActivityRow({ entry, onPress, last }: { entry: RecentEntry; onPr
       </View>
       <AmountDisplay amount={entry.amount} sign={sign} size="label" color={amountColor} strikeThrough={cancelled} />
     </Pressable>
+    </SwipeActionRow>
   );
 }

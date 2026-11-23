@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { avatarSeed, avatarTintIndex, compareByDebt, latestPayment } from '@/domain/reading';
+import { avatarSeed, avatarTintIndex, compareByDebt, latestPayment, rowShortcut } from '@/domain/reading';
 import { shortStamp } from '@/domain/time';
 
 describe('latestPayment', () => {
@@ -35,6 +35,13 @@ describe('compareByDebt', () => {
       'Sidi',
       'Lamine',
     ]);
+  });
+});
+
+describe('rowShortcut', () => {
+  it('offers only delete on a live entry, and only restore once it is cancelled', () => {
+    expect(rowShortcut(false)).toBe('delete');
+    expect(rowShortcut(true)).toBe('restore');
   });
 });
 
