@@ -306,6 +306,23 @@ const en = {
   pinOnShort: 'On',
   pinOffShort: 'Off',
   settingsFooter: 'Daftar v{version} · 100% Offline · Data stays on this phone',
+  // local daily notifications (decision 0020)
+  groupReminders: 'Reminders',
+  dailyReminder: 'Daily follow-up',
+  dailyReminderOff: 'Phone notification at closing — off',
+  dailyReminderOn: 'Every day at {time}',
+  dailyReminderHint:
+    'One calm summary for you only — never sent to customers. Pick a time when the shop is quiet.',
+  reminderTime: 'Reminder time',
+  enableDailyReminder: 'Notify me every day',
+  testNotification: 'Send a test notification',
+  testNotificationSent: 'Look at your notification tray in a moment.',
+  notifPermissionDenied: 'Allow notifications for Daftar in the phone settings.',
+  notifUnsupported: 'Notifications are not available on this device.',
+  notifDailyTitle: 'Daftar — follow-up',
+  notifDailyClear: 'Nobody owes you anything today. Your ledger is clear.',
+  notifDailyBody: 'Today: {count} customers owe you · {amount}.',
+  notifDailyStale: '{stale} with no payment for 30+ days.',
 };
 
 export type TranslationKey = keyof typeof en;
@@ -599,6 +616,22 @@ const fr: Dictionary = {
   pinOnShort: 'Activé',
   pinOffShort: 'Désactivé',
   settingsFooter: 'Daftar v{version} · 100% Hors ligne · Données sur votre téléphone',
+  groupReminders: 'Rappels',
+  dailyReminder: 'Suivi du jour',
+  dailyReminderOff: 'Notification du téléphone à la fermeture — désactivée',
+  dailyReminderOn: 'Tous les jours à {time}',
+  dailyReminderHint:
+    'Un résumé calme pour vous seul — jamais envoyé aux clients. Choisissez une heure où la boutique est tranquille.',
+  reminderTime: 'Heure du rappel',
+  enableDailyReminder: 'Me prévenir chaque jour',
+  testNotification: 'Envoyer une notification test',
+  testNotificationSent: 'Regardez la barre de notifications dans un instant.',
+  notifPermissionDenied: 'Autorisez les notifications pour Daftar dans les réglages du téléphone.',
+  notifUnsupported: 'Les notifications ne sont pas disponibles sur cet appareil.',
+  notifDailyTitle: 'Daftar — suivi',
+  notifDailyClear: 'Personne ne vous doit rien aujourd’hui. Votre cahier est clair.',
+  notifDailyBody: 'Aujourd’hui : {count} clients vous doivent · {amount}.',
+  notifDailyStale: '{stale} sans paiement depuis 30 jours ou plus.',
 };
 
 const ar: Dictionary = {
@@ -888,6 +921,22 @@ const ar: Dictionary = {
   pinOnShort: 'مفعّل',
   pinOffShort: 'متوقف',
   settingsFooter: 'دفتر \u2066v{version}\u2069 · 100% بدون إنترنت · بياناتك على هذا الهاتف',
+  groupReminders: 'التذكيرات',
+  dailyReminder: 'متابعة يومية',
+  dailyReminderOff: 'إشعار الهاتف عند الإغلاق — متوقف',
+  dailyReminderOn: 'كل يوم الساعة {time}',
+  dailyReminderHint:
+    'ملخص هادئ لك أنت فقط — لا يُرسل للزبائن أبداً. اختر وقتاً يكون فيه المحل هادئاً.',
+  reminderTime: 'وقت التذكير',
+  enableDailyReminder: 'نبّهني كل يوم',
+  testNotification: 'أرسل إشعاراً تجريبياً',
+  testNotificationSent: 'انظر إلى شريط الإشعارات بعد لحظات.',
+  notifPermissionDenied: 'اسمح بإشعارات دفتر من إعدادات الهاتف.',
+  notifUnsupported: 'الإشعارات غير متاحة على هذا الجهاز.',
+  notifDailyTitle: 'دفتر — متابعة',
+  notifDailyClear: 'لا أحد عليه دين لك اليوم. دفترك صافٍ.',
+  notifDailyBody: 'اليوم: {count} زبائن عليهم ديون · {amount}.',
+  notifDailyStale: '{stale} بلا دفعة منذ 30 يوماً أو أكثر.',
 };
 
 export const DICTIONARIES: Record<Language, Dictionary> = { en, fr, ar };

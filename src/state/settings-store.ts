@@ -4,6 +4,11 @@ import { create } from 'zustand';
 
 import { getSetting, setSetting } from '@/db/repository';
 import { DEFAULT_CURRENCY } from '@/domain/currency';
+import {
+  clampReminderHour,
+  DEFAULT_REMINDER_HOUR,
+  DEFAULT_REMINDER_MINUTE,
+} from '@/domain/notifications';
 import type { Language } from '@/i18n/translations';
 
 export interface AppSettings {
@@ -12,6 +17,11 @@ export interface AppSettings {
   shopName: string;
   countryCode: string;
   onboarded: boolean;
+  /** Local daily follow-up notification for the shopkeeper (decision 0020). */
+  remindersEnabled: boolean;
+  /** Local hour 0–23 for the daily summary (default 20 = closing time). */
+  reminderHour: number;
+  reminderMinute: number;
 }
 
 /** SQLite keys (kept from v1 so existing installs keep their settings). */
@@ -21,6 +31,9 @@ const SETTING_KEYS: Record<keyof AppSettings, string> = {
   shopName: 'shop_name',
   countryCode: 'country_code',
   onboarded: 'onboarded',
+  remindersEnabled: 'reminders_enabled',
+  reminderHour: 'reminder_hour',
+  reminderMinute: 'reminder_minute',
 };
 
 function detectLanguage(): Language {
@@ -45,16 +58,25 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     shopName: '',
     countryCode: '',
     onboarded: false,
+    remindersEnabled: false,
+    reminderHour: DEFAULT_REMINDER_HOUR,
+    reminderMinute: DEFAULT_REMINDER_MINUTE,
   },
   load: async (db) => {
-    const [language, currency, shopName, countryCode, onboarded] = await Promise.all([
-      getSetting(db, SETTING_KEYS.language),
-      getSetting(db, SETTING_KEYS.currency),
-      getSetting(db, SETTING_KEYS.shopName),
-      getSetting(db, SETTING_KEYS.countryCode),
-      getSetting(db, SETTING_KEYS.onboarded),
-    ]);
+    const [language, currency, shopName, countryCode, onboarded, remindersEnabled, reminderHour, reminderMinute] =
+      await Promise.all([
+        getSetting(db, SETTING_KEYS.language),
+        getSetting(db, SETTING_KEYS.currency),
+        getSetting(db, SETTING_KEYS.shopName),
+        getSetting(db, SETTING_KEYS.countryCode),
+        getSetting(db, SETTING_KEYS.onboarded),
+        getSetting(db, SETTING_KEYS.remindersEnabled),
+        getSetting(db, SETTING_KEYS.reminderHour),
+        getSetting(db, SETTING_KEYS.reminderMinute),
+      ]);
     const prev = get().settings;
+    const parsedHour = reminderHour != null ? Number(reminderHour) : prev.reminderHour;
+    const parsedMinute = reminderMinute != null ? Number(reminderMinute) : prev.reminderMinute;
     set({
       ready: true,
       settings: {
@@ -63,6 +85,11 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
         shopName: shopName ?? '',
         countryCode: countryCode ?? '',
         onboarded: onboarded === '1',
+        remindersEnabled: remindersEnabled === '1',
+        reminderHour: clampReminderHour(parsedHour),
+        reminderMinute: Number.isFinite(parsedMinute)
+          ? Math.min(59, Math.max(0, Math.trunc(parsedMinute)))
+          : DEFAULT_REMINDER_MINUTE,
       },
     });
   },

@@ -10,6 +10,7 @@ export {
   ArrowUpRight,
   Ban,
   Banknote,
+  Bell,
   BookOpen,
   ChartPie,
   Check,

@@ -13,9 +13,10 @@ import {
 } from '@expo-google-fonts/readex-pro';
 import { JetBrainsMono_700Bold } from '@expo-google-fonts/jetbrains-mono';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
+import * as Notifications from 'expo-notifications';
 import * as SplashScreen from 'expo-splash-screen';
-import { SQLiteProvider, type SQLiteDatabase } from 'expo-sqlite';
+import { SQLiteProvider, useSQLiteContext, type SQLiteDatabase } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
 import { AppState, Platform, View } from 'react-native';
@@ -24,6 +25,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ExitToast } from '@/components/ui';
 import { migrate } from '@/db/migrations';
 import { purgeExpiredTrash } from '@/db/repository';
+import { configureNotificationHandler, scheduleDailySummary } from '@/lib/notifications';
 import { LockScreen } from '@/screens/lock-screen';
 import { OnboardingScreen } from '@/screens/onboarding-screen';
 import { hasPin } from '@/security/pin';
@@ -34,6 +36,7 @@ import { getFontFamily, ThemeProvider, useTheme } from '@/theme';
 import '../global.css';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
+configureNotificationHandler();
 
 /** Opening any screen directly (deep link, notification) keeps Home underneath, so Back never exits. */
 export const unstable_settings = { anchor: '(tabs)' };
@@ -47,11 +50,72 @@ async function initDatabase(db: SQLiteDatabase): Promise<void> {
 /** Lock again if the app stayed in background longer than this. */
 const RELOCK_AFTER_MS = 30_000;
 
+function redirectFromNotification(notification: Notifications.Notification): void {
+  const url = notification.request.content.data?.url;
+  if (typeof url === 'string' && url.length > 0) {
+    router.push(url as '/(tabs)/customers');
+    Notifications.clearLastNotificationResponse();
+  }
+}
+
+/** Keeps the daily local summary in sync with the ledger and opens Customers on tap. */
+function useDailyNotifications(unlocked: boolean): void {
+  const db = useSQLiteContext();
+  const { ready, settings, t } = useApp();
+
+  useEffect(() => {
+    if (!ready || !unlocked || !settings.onboarded || Platform.OS === 'web') return;
+
+    const refresh = () => {
+      void scheduleDailySummary({
+        db,
+        enabled: settings.remindersEnabled,
+        hour: settings.reminderHour,
+        minute: settings.reminderMinute,
+        language: settings.language,
+        currency: settings.currency,
+        t,
+      });
+    };
+
+    refresh();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') refresh();
+    });
+    return () => sub.remove();
+  }, [
+    db,
+    ready,
+    unlocked,
+    settings.onboarded,
+    settings.remindersEnabled,
+    settings.reminderHour,
+    settings.reminderMinute,
+    settings.language,
+    settings.currency,
+    t,
+  ]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    const initial = Notifications.getLastNotificationResponse();
+    if (initial?.notification) redirectFromNotification(initial.notification);
+
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      redirectFromNotification(response.notification);
+    });
+    return () => sub.remove();
+  }, []);
+}
+
 function Gate({ fontsReady }: { fontsReady: boolean }) {
   const { ready, settings, t } = useApp();
   const { colors, isDark } = useTheme();
   const [locked, setLocked] = useState<boolean | null>(null);
   const backgroundAt = useRef<number | null>(null);
+
+  useDailyNotifications(locked === false);
 
   useEffect(() => {
     // Web's SecureStore stub throws. Treat that as "no PIN" so the shell can open.
