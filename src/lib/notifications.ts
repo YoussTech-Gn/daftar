@@ -120,13 +120,13 @@ export async function scheduleDailySummary(options: {
     bodyWithStale: t('notifDailyStale'),
   });
 
+  // channelId belongs on the trigger (SDK 58 docs), not on content.
   await Notifications.scheduleNotificationAsync({
     identifier: DAILY_SUMMARY_NOTIFICATION_ID,
     content: {
       title: content.title,
       body: content.body,
       data: { url: '/(tabs)/customers', kind: 'daily-summary' },
-      ...(Platform.OS === 'android' ? { channelId: DAILY_SUMMARY_CHANNEL_ID } : null),
     },
     trigger: {
       type: SchedulableTriggerInputTypes.DAILY,
@@ -166,7 +166,6 @@ export async function sendTestNotification(options: {
       title: content.title,
       body: content.body,
       data: { url: '/(tabs)/customers', kind: 'daily-summary' },
-      ...(Platform.OS === 'android' ? { channelId: DAILY_SUMMARY_CHANNEL_ID } : null),
     },
     trigger: {
       type: SchedulableTriggerInputTypes.TIME_INTERVAL,

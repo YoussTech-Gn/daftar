@@ -36,11 +36,12 @@ Docs: https://docs.expo.dev/eas/index.md
 
 ## Notifications
 
-- **Library:** `expo-notifications` (SDK-matched via `npx expo install expo-notifications`).
+- **Library:** `expo-notifications` (SDK-matched via `npx expo install expo-notifications`; recommended `~58.1.9` for Expo SDK 58).
 - **Use:** local notifications only — a daily follow-up summary for the shopkeeper at a time he chooses (default 20:00). Never auto-message customers.
 - **Code:** `src/lib/notifications.ts` (schedule / cancel / test), `src/domain/notifications.ts` (pure copy + helpers). Settings: `remindersEnabled`, `reminderHour` in `src/state/settings-store.ts`. Decision: `docs/decisions/0020-local-notifications.md`.
 - Config plugin in `app.json` with `enableRemoteNotifications: false` (no push server). Local notifications work in Expo Go; remote push on Android needs a development build.
-- Docs: https://docs.expo.dev/versions/v58.0.0/sdk/notifications/
+- **API shape (do not invent from memory):** handler uses `shouldShowBanner` / `shouldShowList` (not deprecated `shouldShowAlert`); triggers must set `type: SchedulableTriggerInputTypes.*`; Android `channelId` goes on the **trigger**, not on content; tap handling uses sync `getLastNotificationResponse()` / `clearLastNotificationResponse()`.
+- Docs (versioned): https://docs.expo.dev/versions/v58.0.0/sdk/notifications.md
 
 ## Rules
 
