@@ -55,7 +55,7 @@ export function getTextStyle(
   const scale = TOKENS.typography.scale[role];
   const isCompactDisplay = role === 'displayAmount' && opts?.compact;
   const fontSize = isCompactDisplay ? TOKENS.typography.scale.displayAmount.fontSizeCompact : scale.fontSize;
-  const lineHeight = isCompactDisplay ? 34 : scale.lineHeight;
+  const lineHeight = isCompactDisplay ? 38 : scale.lineHeight;
   const resolvedWeight = opts?.weight ?? (scale.fontWeight as FontWeightKey);
 
   return {

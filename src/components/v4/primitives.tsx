@@ -77,7 +77,7 @@ export function Segmented<T extends string>({
               if (!active) haptic.selection();
               onChange(o.value);
             }}
-            className={`min-h-[44px] flex-1 items-center justify-center rounded-xl px-2 ${active ? 'bg-surface-solid' : ''}`}>
+            className={`min-h-[48px] flex-1 items-center justify-center rounded-xl px-2 ${active ? 'bg-surface-solid' : ''}`}>
             <Txt
               weight={active ? '700' : '500'}
               numberOfLines={1}
@@ -157,6 +157,7 @@ export function PrimaryButton({
 /** Tactile numpad: 1–9, 000, 0, ⌫. */
 export function Numpad({ onKey }: { onKey: (key: string) => void }) {
   const { colors } = useTheme();
+  const { t } = useApp();
   const rows = [
     ['1', '2', '3'],
     ['4', '5', '6'],
@@ -171,12 +172,12 @@ export function Numpad({ onKey }: { onKey: (key: string) => void }) {
             <Pressable
               key={k}
               accessibilityRole="button"
-              accessibilityLabel={k === 'back' ? 'delete' : k}
+              accessibilityLabel={k === 'back' ? t('delete') : k}
               onPress={() => {
                 haptic.light();
                 onKey(k);
               }}
-              className="h-[54px] flex-1 items-center justify-center rounded-2xl border border-line bg-surface active:bg-surface-muted">
+              className="h-14 min-h-[56px] flex-1 items-center justify-center rounded-2xl border border-line bg-surface active:bg-surface-muted">
               {k === 'back' ? (
                 <Delete size={ICON_SCALE.md.size} color={colors.text} strokeWidth={ICON_SCALE.md.strokeWidth} />
               ) : (

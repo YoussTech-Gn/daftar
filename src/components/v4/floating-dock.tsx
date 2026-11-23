@@ -79,7 +79,7 @@ export function FloatingDock({ state, descriptors, emitter, navigateToTab }: Tab
                 <Txt
                   weight={focused ? '700' : '500'}
                   numberOfLines={1}
-                  className={`text-[11px] ${focused ? 'text-accent' : 'text-ink-2'}`}>
+                  className={`text-xs ${focused ? 'text-accent' : 'text-ink-2'}`}>
                   {label}
                 </Txt>
               </Pressable>

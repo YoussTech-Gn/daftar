@@ -155,7 +155,7 @@ function OperationForm({
                   haptic.selection();
                   setCustomerId(c.id);
                 }}
-                className={`min-h-[44px] justify-center rounded-full border px-4 ${active ? 'border-accent bg-accent-soft' : 'border-line bg-surface'}`}>
+                className={`min-h-[48px] justify-center rounded-full border px-4 ${active ? 'border-accent bg-accent-soft' : 'border-line bg-surface'}`}>
                 <Txt weight={active ? '700' : '500'} numberOfLines={1} className={active ? 'text-accent' : 'text-ink'}>
                   {c.name}
                 </Txt>
@@ -188,7 +188,7 @@ function OperationForm({
               closeOperation();
               router.push({ pathname: '/customer/[id]', params: { id: String(selected.id) } });
             }}
-            className={`min-h-[36px] items-center gap-1 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+            className={`min-h-[48px] items-center gap-1 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
             <Txt weight="600" className="text-xs text-accent">
               {t('opOpenFile')}
             </Txt>
@@ -210,7 +210,7 @@ function OperationForm({
                   haptic.selection();
                   setMethod(m);
                 }}
-                className={`min-h-[40px] flex-1 items-center justify-center rounded-xl border ${active ? 'border-payment bg-payment-soft' : 'border-line bg-surface'}`}>
+                className={`min-h-[48px] flex-1 items-center justify-center rounded-xl border ${active ? 'border-payment bg-payment-soft' : 'border-line bg-surface'}`}>
                 <Txt weight={active ? '700' : '500'} numberOfLines={1} className={`text-sm ${active ? 'text-payment' : 'text-ink-2'}`}>
                   {t(`method_${m}`)}
                 </Txt>
@@ -225,7 +225,7 @@ function OperationForm({
             closeOperation();
             router.push({ pathname: '/entry/new', params: { customerId: String(selected.id), kind: 'credit' } });
           }}
-          className={`min-h-[36px] items-center gap-1.5 self-start ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+          className={`min-h-[48px] items-center gap-1.5 self-start ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
           <ShoppingBag size={ICON_SCALE.xs.size} color={v4(scheme, 'text-secondary')} />
           <Txt className="text-xs text-ink-2">{t('opWithProducts')}</Txt>
         </Pressable>

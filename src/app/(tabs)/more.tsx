@@ -282,7 +282,7 @@ export default function MoreScreen() {
               reset({ shopName: settings.shopName, countryCode: settings.countryCode });
               setSheet('shop');
             }}
-            className="min-h-[36px] justify-center rounded-full bg-accent-soft px-4">
+            className="min-h-[48px] justify-center rounded-full bg-accent-soft px-4">
             <Txt weight="700" className="text-xs text-accent">
               {t('edit')}
             </Txt>

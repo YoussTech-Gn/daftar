@@ -20,5 +20,6 @@ export {
   SkeletonBox,
 } from './skeleton-loader';
 export { StampSaveOverlay } from './stamp-save-overlay';
+export { SwipeActionRow } from './swipe-action';
 export { Avatar, Card, ChipRow, DaftarText, Row, Txt, type DaftarTextProps, type TextTone } from './text';
 export { UndoBar, UndoBar5s } from './undo-bar';

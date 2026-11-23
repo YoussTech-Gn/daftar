@@ -18,7 +18,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { SQLiteProvider, type SQLiteDatabase } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { AppState, View } from 'react-native';
+import { AppState, Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ExitToast } from '@/components/ui';
@@ -54,7 +54,13 @@ function Gate({ fontsReady }: { fontsReady: boolean }) {
   const backgroundAt = useRef<number | null>(null);
 
   useEffect(() => {
-    hasPin().then(setLocked);
+    // Web's SecureStore stub throws. Treat that as "no PIN" so the shell can open.
+    // On a phone, a store failure must not skip the lock.
+    hasPin()
+      .then(setLocked)
+      .catch(() => {
+        if (Platform.OS === 'web') setLocked(false);
+      });
     const sub = AppState.addEventListener('change', async (state) => {
       if (state === 'background') backgroundAt.current = Date.now();
       if (state === 'active' && backgroundAt.current !== null) {

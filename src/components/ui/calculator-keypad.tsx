@@ -16,7 +16,7 @@ function KeypadKey({
   onPress: (key: CalcKey) => void;
 }) {
   const { colors, shadows } = useTheme();
-  const { settings } = useApp();
+  const { settings, t } = useApp();
   const { animatedStyle, onPressIn, onPressOut } = usePressScale({
     scaleTo: 0.94,
     opacityTo: 0.9,
@@ -29,7 +29,9 @@ function KeypadKey({
     <Animated.View style={[{ flex }, animatedStyle]}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={calcKey}
+        accessibilityLabel={
+          calcKey === 'back' ? t('delete') : calcKey === 'clear' ? t('clear') : calcKey === '+' ? t('add') : calcKey
+        }
         onPress={() => onPress(calcKey)}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
@@ -58,6 +60,7 @@ function KeypadKey({
           </Text>
         ) : (
           <Text
+            maxFontSizeMultiplier={1.3}
             style={[
               styles.digitLabel,
               NUMERIC_TEXT_STYLE,
@@ -139,7 +142,7 @@ const styles = StyleSheet.create({
     direction: 'ltr',
   },
   key: {
-    height: 48,
+    minHeight: 56,
     borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
