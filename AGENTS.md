@@ -34,6 +34,15 @@ Run lint and typecheck before declaring any task done.
 Use EAS to build, sign, and submit the app in the cloud (`eas build`, `eas submit`) and to ship over-the-air updates (`eas update`) — no local Xcode or Android Studio required. Run EAS CLI as `bunx eas-cli <command>` in Bun projects, or `npx eas-cli@latest <command>` otherwise; substitute that for bare `eas` in docs examples.
 Docs: https://docs.expo.dev/eas/index.md
 
+## Notifications
+
+- **Library:** `expo-notifications` (SDK-matched via `npx expo install expo-notifications`; recommended `~58.1.9` for Expo SDK 58).
+- **Use:** local notifications only — a daily follow-up summary for the shopkeeper at a time he chooses (default 20:00). Never auto-message customers.
+- **Code:** `src/lib/notifications.ts` (schedule / cancel / test), `src/domain/notifications.ts` (pure copy + helpers). Settings: `remindersEnabled`, `reminderHour` in `src/state/settings-store.ts`. Decision: `docs/decisions/0020-local-notifications.md`.
+- Config plugin in `app.json` with `enableRemoteNotifications: false` (no push server). Local notifications work in Expo Go; remote push on Android needs a development build.
+- **API shape (do not invent from memory):** handler uses `shouldShowBanner` / `shouldShowList` (not deprecated `shouldShowAlert`); triggers must set `type: SchedulableTriggerInputTypes.*`; Android `channelId` goes on the **trigger**, not on content; tap handling uses sync `getLastNotificationResponse()` / `clearLastNotificationResponse()`.
+- Docs (versioned): https://docs.expo.dev/versions/v58.0.0/sdk/notifications.md
+
 ## Rules
 
 - If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.

@@ -11,6 +11,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,6 +20,7 @@ import { FormField } from '@/components/form-field';
 import { DOCK_SPACE } from '@/components/v4/floating-dock';
 import { Glass, Txt } from '@/components/v4/primitives';
 import {
+  Bell,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -40,16 +42,18 @@ import {
 import { ConfirmationDialog, DaftarButton, DaftarText, Row } from '@/components/ui';
 import { listProducts, listTrash, type BackupData } from '@/db/repository';
 import { CURRENCIES } from '@/domain/currency';
+import { formatReminderClock, REMINDER_HOUR_OPTIONS } from '@/domain/notifications';
 import { shopSchema, type ShopFormValues } from '@/domain/schemas';
 import { LANGUAGES } from '@/i18n/translations';
 import { importAll, pickBackup, shareBackup, shareCsv } from '@/lib/export';
 import { haptic } from '@/lib/haptics';
+import { scheduleDailySummary, sendTestNotification } from '@/lib/notifications';
 import { hasPin, hasRecoveryCode, removePin } from '@/security/pin';
 import { useSessionStore } from '@/state/session-store';
 import { useApp } from '@/state/use-app';
 import { useTheme, v4 } from '@/theme';
 
-type SheetKind = 'shop' | 'language' | 'currency' | 'pin' | 'backup' | null;
+type SheetKind = 'shop' | 'language' | 'currency' | 'pin' | 'backup' | 'reminders' | null;
 
 function Hairline() {
   return <View className="h-px bg-line" />;
@@ -247,10 +251,44 @@ export default function MoreScreen() {
   const currencyDisplay =
     settings.currency === 'XOF' || settings.currency === 'XAF' ? 'FCFA' : settings.currency;
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
+  const reminderClock = formatReminderClock(settings.reminderHour, settings.reminderMinute);
 
   const languageLabel = LANGUAGES.find((l) => l.code === settings.language)?.label ?? settings.language;
   const dir = isRTL ? 'flex-row-reverse' : 'flex-row';
   const align = isRTL ? 'right' : 'left';
+
+  async function applyReminderSettings(patch: {
+    remindersEnabled?: boolean;
+    reminderHour?: number;
+    reminderMinute?: number;
+  }) {
+    const next = {
+      remindersEnabled: patch.remindersEnabled ?? settings.remindersEnabled,
+      reminderHour: patch.reminderHour ?? settings.reminderHour,
+      reminderMinute: patch.reminderMinute ?? settings.reminderMinute,
+    };
+    await updateSettings(patch);
+    const result = await scheduleDailySummary({
+      db,
+      enabled: next.remindersEnabled,
+      hour: next.reminderHour,
+      minute: next.reminderMinute,
+      language: settings.language,
+      currency: settings.currency,
+      t,
+    });
+    if (result === 'denied') {
+      await updateSettings({ remindersEnabled: false });
+      showToast(t('notifPermissionDenied'));
+      return;
+    }
+    if (result === 'unsupported') {
+      await updateSettings({ remindersEnabled: false });
+      showToast(t('notifUnsupported'));
+      return;
+    }
+    haptic.success();
+  }
 
   return (
     <SafeAreaView edges={['top']} className="flex-1 bg-bg">
@@ -303,6 +341,22 @@ export default function MoreScreen() {
             title={t('languageAndCurrency')}
             subtitle={`${languageLabel} · ${currencyDisplay}`}
             onPress={() => setSheet('language')}
+            last
+          />
+        </SettingsGroup>
+
+        <SettingsGroup title={t('groupReminders')}>
+          <V4Row
+            icon={Bell}
+            tint="payment"
+            title={t('dailyReminder')}
+            subtitle={
+              settings.remindersEnabled
+                ? t('dailyReminderOn', { time: reminderClock })
+                : t('dailyReminderOff')
+            }
+            pill={settings.remindersEnabled ? t('pinOnShort') : undefined}
+            onPress={() => setSheet('reminders')}
             last
           />
         </SettingsGroup>
@@ -511,6 +565,83 @@ export default function MoreScreen() {
         </View>
       </SettingsSheet>
 
+      {/* Daily local notification sheet */}
+      <SettingsSheet visible={sheet === 'reminders'} title={t('dailyReminder')} onClose={() => setSheet(null)}>
+        <View style={styles.sheetBody}>
+          <DaftarText role="caption" tone="muted">
+            {t('dailyReminderHint')}
+          </DaftarText>
+          <View style={[styles.toggleRow, dir === 'flex-row-reverse' ? styles.toggleRowRtl : null]}>
+            <DaftarText role="body" weight="600" style={{ flex: 1 }}>
+              {t('enableDailyReminder')}
+            </DaftarText>
+            <Switch
+              value={settings.remindersEnabled}
+              onValueChange={(value) => {
+                haptic.selection();
+                run(() => applyReminderSettings({ remindersEnabled: value }));
+              }}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={colors.surfaceRaised}
+            />
+          </View>
+          <DaftarText role="caption" tone="secondary">
+            {t('reminderTime')}
+          </DaftarText>
+          <View style={[styles.hourRow, isRTL ? styles.hourRowRtl : null]}>
+            {REMINDER_HOUR_OPTIONS.map((hour) => {
+              const active = settings.reminderHour === hour;
+              return (
+                <Pressable
+                  key={hour}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  onPress={() => {
+                    haptic.selection();
+                    run(() => applyReminderSettings({ reminderHour: hour, reminderMinute: 0 }));
+                  }}
+                  style={[
+                    styles.hourChip,
+                    {
+                      borderColor: active ? colors.primary : colors.border,
+                      backgroundColor: active ? colors.primarySoft : colors.surface,
+                    },
+                  ]}>
+                  <DaftarText role="caption" weight={active ? '700' : '500'} tone={active ? 'primary' : 'default'}>
+                    {formatReminderClock(hour)}
+                  </DaftarText>
+                </Pressable>
+              );
+            })}
+          </View>
+          <DaftarButton
+            label={t('testNotification')}
+            icon={Bell}
+            variant="secondary"
+            onPress={() =>
+              run(async () => {
+                const result = await sendTestNotification({
+                  db,
+                  language: settings.language,
+                  currency: settings.currency,
+                  t,
+                });
+                if (result === 'denied') {
+                  showToast(t('notifPermissionDenied'));
+                  return;
+                }
+                if (result === 'unsupported') {
+                  showToast(t('notifUnsupported'));
+                  return;
+                }
+                haptic.success();
+                showToast(t('testNotificationSent'));
+              })
+            }
+          />
+        </View>
+      </SettingsSheet>
+
       <ConfirmationDialog
         visible={confirmRemovePin}
         title={t('removePinTitle')}
@@ -634,6 +765,32 @@ const styles = StyleSheet.create({
   optionRow: {
     minHeight: 50,
     paddingHorizontal: 14,
+    justifyContent: 'center',
+  },
+  toggleRow: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  toggleRowRtl: {
+    flexDirection: 'row-reverse',
+  },
+  hourRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  hourRowRtl: {
+    flexDirection: 'row-reverse',
+  },
+  hourChip: {
+    minHeight: 40,
+    minWidth: 64,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
     justifyContent: 'center',
   },
 });

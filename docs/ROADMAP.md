@@ -46,11 +46,11 @@
 ## Next — from analysis 0001
 - [ ] Payment promises on credit (end of week / month / payday / date / when he can)
 - [ ] Customer modes: Normal / Trusted (no pressure) / Give time (hardship)
-- [ ] "To follow up" screen + daily summary notification + gentle / normal / firm messages
+- [x] Daily summary local notification (shopkeeper chooses time; decision 0020) — "To follow up" screen + message tones still open
 - [ ] Protection levels (Simple / Protected / Owner + helper) + hide-amounts eye + weekly backup reminder
 
 ## Night 3 — collection & trust
-- [ ] Due date on credit + local reminder notification for the shopkeeper; "Overdue" filter
+- [x] Local daily reminder notification for the shopkeeper (decision 0020); due date on credit + "Overdue" filter still open
 - [ ] Customer statement as PDF (expo-print) shared over WhatsApp
 - [ ] Edit an entry (not only delete)
 - [ ] "Daily close" screen: totals per payment channel (cash / Wave / OM / MTN)

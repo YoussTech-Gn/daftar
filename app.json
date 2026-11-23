@@ -42,6 +42,14 @@
         {
           "contactsPermission": "Daftar uses your contacts only to add a customer you pick."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#1E3A5F",
+          "defaultChannel": "daftar-daily-summary",
+          "enableRemoteNotifications": false
+        }
       ]
     ],
     "experiments": {
