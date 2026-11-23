@@ -117,7 +117,7 @@ export function ActivityRow({
       accessibilityRole="button"
       accessibilityHint={cancelled ? t('restore') : t('delete')}
       onPress={cancelled ? onAction : onPress}
-      className={`min-h-[64px] items-center gap-3 bg-surface px-4 py-3 active:bg-surface-muted ${last ? '' : 'border-b border-line'} ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+      className={`min-h-[64px] items-center gap-3 bg-surface-solid px-4 py-3 active:bg-surface-muted ${last ? '' : 'border-b border-line'} ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
       <View className={`h-10 w-10 items-center justify-center rounded-xl ${SOFT_BG[tone]}`}>
         <Icon size={ICON_SCALE.sm.size} color={v4(scheme, tone)} />
       </View>
