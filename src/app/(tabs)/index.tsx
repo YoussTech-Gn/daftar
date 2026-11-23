@@ -90,37 +90,42 @@ export default function HomeScreen() {
         </View>
 
         {/* Hero */}
-        <Glass className="gap-4 p-5">
-          <View className={`items-center justify-between ${dir}`}>
-            <Txt weight="600" className="text-sm text-ink-2">
-              {t('totalOwed')}
-            </Txt>
-            <Pill
-              label={t('recoveredPill', { pct: Math.round(ratio * 100) })}
-              className="bg-payment-soft"
-              textClassName="text-payment"
-            />
-          </View>
+        <Glass className="gap-3 p-5">
+          <Txt weight="600" className="text-sm text-ink-2" style={{ textAlign: isRTL ? 'right' : 'left' }}>
+            {t('totalOwed')}
+          </Txt>
           <View className={`items-center gap-3 ${dir}`}>
             <View className="flex-1">
               <AmountDisplay amount={summary?.totalOwed ?? 0} size="display" animate color={colors.text} align={isRTL ? 'right' : 'left'} />
             </View>
             <PrivacyEye />
           </View>
+          <Txt className="text-xs text-ink-2" style={{ textAlign: isRTL ? 'right' : 'left' }}>
+            {t('recoveredPill', { pct: Math.round(ratio * 100) })}
+          </Txt>
           <View className="h-px bg-line" />
           <View className={`gap-4 ${dir}`}>
-            <View className="flex-1 gap-1">
-              <Txt weight="600" className="text-xs text-credit">
+            <View className="flex-1 gap-0.5">
+              <Txt weight="600" className="text-xs text-credit" style={{ textAlign: isRTL ? 'right' : 'left' }}>
                 {t('creditsToday')}
               </Txt>
-              <AmountDisplay amount={summary?.creditToday ?? 0} size="heading" color={colors.creditDeep} />
+              <AmountDisplay
+                amount={summary?.creditToday ?? 0}
+                size="label"
+                color={colors.creditDeep}
+                align={isRTL ? 'right' : 'left'}
+              />
             </View>
-            <View className="w-px bg-line" />
-            <View className="flex-1 gap-1">
-              <Txt weight="600" className="text-xs text-payment">
+            <View className="flex-1 gap-0.5">
+              <Txt weight="600" className="text-xs text-payment" style={{ textAlign: isRTL ? 'right' : 'left' }}>
                 {t('receivedToday2')}
               </Txt>
-              <AmountDisplay amount={summary?.paymentsToday ?? 0} size="heading" color={colors.paymentDeep} />
+              <AmountDisplay
+                amount={summary?.paymentsToday ?? 0}
+                size="label"
+                color={colors.paymentDeep}
+                align={isRTL ? 'right' : 'left'}
+              />
             </View>
           </View>
         </Glass>
@@ -139,7 +144,7 @@ export default function HomeScreen() {
                   haptic.selection();
                   setHideCancelled((v) => !v);
                 }}
-                className={`min-h-[36px] justify-center rounded-full px-3 ${hideCancelled ? 'bg-accent-soft' : 'bg-surface-muted'}`}>
+                className={`min-h-[48px] justify-center rounded-full px-3 ${hideCancelled ? 'bg-accent-soft' : 'bg-surface-muted'}`}>
                 <Txt weight="600" className={`text-xs ${hideCancelled ? 'text-accent' : 'text-ink-2'}`}>
                   {hideCancelled ? t('showCancelled') : t('hideCancelled')}
                 </Txt>

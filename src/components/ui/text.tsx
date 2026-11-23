@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Text, View, type StyleProp, type TextProps, type TextStyle, type ViewStyle } from 'react-native';
 
+import { avatarSeed, avatarTintIndex } from '@/domain/reading';
 import { useApp } from '@/state/use-app';
 import {
   getFontFamily,
@@ -143,16 +144,17 @@ export function Card({ children, style }: { children: ReactNode; style?: StylePr
   );
 }
 
-function hashName(name: string): number {
-  let h = 0;
-  for (let i = 0; i < name.length; i += 1) {
-    h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  }
-  return h;
-}
-
-/** Deterministic initials avatar with soft semantic Indigo Atelier surface tint (zero remote images). */
-export function Avatar({ name, size = 42 }: { name: string; size?: number }) {
+/** Deterministic initials avatar. Neutral tints only — never credit, payment, or forgiven. */
+export function Avatar({
+  name,
+  id,
+  size = 42,
+}: {
+  name: string;
+  /** Customer id. Hashed so the colour follows the person, not the debt or the spelling of the name. */
+  id?: number | string;
+  size?: number;
+}) {
   const { isDark } = useTheme();
   const { settings } = useApp();
 
@@ -178,7 +180,7 @@ export function Avatar({ name, size = 42 }: { name: string; size?: number }) {
         { bg: '#E1EEF0', fg: '#1F5560' },
         { bg: '#ECE8F2', fg: '#4A3F66' },
       ];
-  const palette = tints[hashName(name.trim() || '?') % tints.length];
+  const palette = tints[avatarTintIndex(avatarSeed(id, name), tints.length)];
   const radius = Math.round((size / 42) * 13);
 
   return (

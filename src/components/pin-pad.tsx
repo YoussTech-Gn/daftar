@@ -26,7 +26,7 @@ function PinKey({
   onPress: (key: string) => void;
 }) {
   const { colors, shadows } = useTheme();
-  const { settings } = useApp();
+  const { settings, t } = useApp();
   const { animatedStyle, onPressIn, onPressOut } = usePressScale({
     scaleTo: 0.94,
     opacityTo: 0.9,
@@ -41,7 +41,7 @@ function PinKey({
     <Animated.View style={animatedStyle}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={value === BACK ? 'delete' : value}
+        accessibilityLabel={value === BACK ? t('delete') : value}
         onPress={() => onPress(value)}
         onPressIn={onPressIn}
         onPressOut={onPressOut}

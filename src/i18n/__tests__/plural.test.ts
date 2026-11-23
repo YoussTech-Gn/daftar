@@ -21,5 +21,8 @@ describe('plural rules', () => {
     expect(pluralText('ar', 'customersCount', { n: 2 })).toBe('زبونان');
     expect(pluralText('fr', 'customersInDebt', { count: 1 })).toBe('{count} client vous doit');
     expect(pluralText('fr', 'customersInDebt', { count: 5 })).toBeUndefined();
+    expect(pluralText('ar', 'productsSaved', { n: 1 })).toBe('منتج واحد محفوظ');
+    expect(pluralText('en', 'productsSaved', { n: 1 })).toBe('1 item saved');
+    expect(pluralText('fr', 'productsSaved', { n: 1 })).toBe('{n} article enregistré');
   });
 });

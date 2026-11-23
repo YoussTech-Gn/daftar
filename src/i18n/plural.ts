@@ -37,6 +37,7 @@ export const PLURALS: Record<Language, Partial<Record<TranslationKey, PluralForm
     daysLeft: { one: '1 day left' },
     lastDaysAgo: { one: 'Last: 1 day ago' },
     triesBeforeLock: { one: '1 try left before a pause.' },
+    productsSaved: { one: '1 item saved' },
   },
   fr: {
     customersInDebt: { one: '{count} client vous doit' },
@@ -44,6 +45,7 @@ export const PLURALS: Record<Language, Partial<Record<TranslationKey, PluralForm
     daysLeft: { one: 'encore {n} jour' },
     lastDaysAgo: { one: 'Dernier : il y a {n} jour' },
     triesBeforeLock: { one: 'Encore 1 essai avant une pause.' },
+    productsSaved: { one: '{n} article enregistré' },
   },
   ar: {
     customersInDebt: {
@@ -78,6 +80,14 @@ export const PLURALS: Record<Language, Partial<Record<TranslationKey, PluralForm
       few: 'آخر عملية: منذ {n} أيام',
       many: 'آخر عملية: منذ {n} يومًا',
       other: 'آخر عملية: منذ {n} يوم',
+    },
+    productsSaved: {
+      zero: 'لا منتجات محفوظة',
+      one: 'منتج واحد محفوظ',
+      two: 'منتجان محفوظان',
+      few: '{n} منتجات محفوظة',
+      many: '{n} منتجًا محفوظًا',
+      other: '{n} منتج محفوظ',
     },
   },
 };

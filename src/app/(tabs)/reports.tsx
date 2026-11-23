@@ -115,7 +115,7 @@ export default function ReportsScreen() {
               <View
                 key={d.customerId}
                 className={`min-h-[64px] items-center gap-3 px-4 py-3 ${i === debts.length - 1 ? '' : 'border-b border-line'} ${dir}`}>
-                <Avatar name={d.name} size={38} />
+                <Avatar name={d.name} id={d.customerId} size={38} />
                 <View className="flex-1 gap-0.5">
                   <Txt weight="600" numberOfLines={1} style={{ textAlign: align }}>
                     {d.name}
@@ -129,7 +129,7 @@ export default function ReportsScreen() {
                     haptic.selection();
                     openOperation({ kind: 'payment', customerId: d.customerId });
                   }}
-                  className="min-h-[40px] justify-center rounded-full bg-payment-soft px-4 active:opacity-80">
+                  className="min-h-[48px] justify-center rounded-full bg-payment-soft px-4 active:opacity-80">
                   <Txt weight="700" className="text-sm text-payment">
                     {t('collect')}
                   </Txt>

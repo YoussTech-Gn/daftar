@@ -52,13 +52,18 @@ describe('Indigo Atelier design tokens', () => {
         expect(contrast(fg, c.bg)).toBeGreaterThanOrEqual(4.5);
         expect(contrast(fg, c.surface)).toBeGreaterThanOrEqual(4.5);
       }
-      // V4 spec values (decision 0018): muted text and the light credit hue are for meta text, icons and
-      // large figures only (WCAG 3:1). Small amounts use creditDeep / paymentDeep above.
-      for (const fg of [c.textMuted, c.credit, c.payment]) {
+      // Captions, timestamps and inactive labels are small text: muted must clear AA on both backgrounds.
+      expect(contrast(c.textMuted, c.bg)).toBeGreaterThanOrEqual(5.5);
+      expect(contrast(c.textMuted, c.surface)).toBeGreaterThanOrEqual(5.5);
+      // The credit hue itself is for large figures and icons. Small amounts use creditDeep.
+      for (const fg of [c.credit, c.payment]) {
         expect(contrast(fg, c.bg)).toBeGreaterThanOrEqual(3);
       }
-      // Cancelled entries are struck through but must stay legible (large-text AA).
+      // Amounts painted in paymentDeep (including dark mode) stay easy to read.
+      expect(contrast(c.paymentDeep, c.surface)).toBeGreaterThanOrEqual(4.5);
+      // Cancelled ink stays legible on the row surface and on the soft fill.
       expect(contrast(c.cancelled, c.surface)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(c.cancelled, c.cancelledSoft)).toBeGreaterThanOrEqual(4.5);
     }
   });
 
@@ -80,8 +85,12 @@ describe('Indigo Atelier design tokens', () => {
     expect(arDisplay.letterSpacing).toBe(0);
     expect(arDisplay.fontWeight).toBeUndefined();
 
+    const display = getTextStyle('displayAmount', 'fr');
+    expect(display.fontSize).toBeGreaterThanOrEqual(40);
+    expect(display.fontSize).toBeLessThanOrEqual(44);
+
     const compactFr = getTextStyle('displayAmount', 'fr', { compact: true });
-    expect(compactFr.fontSize).toBe(30);
+    expect(compactFr.fontSize).toBe(32);
     expect(compactFr.fontFamily).toBe('Manrope_700Bold');
   });
 

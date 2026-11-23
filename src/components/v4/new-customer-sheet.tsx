@@ -135,7 +135,7 @@ export function NewCustomerSheet() {
         <Pressable
           accessibilityRole="button"
           onPress={pickContact}
-          className={`min-h-[46px] items-center justify-center gap-2 rounded-2xl border border-line bg-surface ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+          className={`min-h-[48px] items-center justify-center gap-2 rounded-2xl border border-line bg-surface ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
           <ContactRound size={ICON_SCALE.sm.size} color={v4(scheme, 'accent')} />
           <Txt weight="600" className="text-accent">
             {t('importContact')}

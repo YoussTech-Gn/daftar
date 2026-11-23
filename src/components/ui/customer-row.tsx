@@ -96,7 +96,7 @@ export function CustomerRow({
           { backgroundColor: colors.surface },
         ]}>
         <Row gap={12}>
-          <Avatar name={customer.name} size={42} />
+          <Avatar name={customer.name} id={customer.id} size={42} />
 
           <View style={styles.centerCol}>
             <DaftarText role="heading" weight="600" numberOfLines={1}>
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   quickPill: {
-    minHeight: 36,
+    minHeight: 48,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 9999,

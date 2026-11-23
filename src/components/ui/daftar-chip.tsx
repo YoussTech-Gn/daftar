@@ -16,7 +16,7 @@ export interface DaftarChipProps {
   onLongPress?: () => void;
 }
 
-/** Tactile Indigo Atelier pill chip (>= 36dp visual height, 48dp hit area via hitSlop, 70ms press). */
+/** Tactile Indigo Atelier pill chip. The chip itself is at least 48dp, so a miss is not required. */
 export function DaftarChip({
   label,
   selected,
@@ -67,7 +67,7 @@ export function DaftarChip({
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ selected }}
-        hitSlop={6}
+        hitSlop={4}
         onPress={onPress}
         onLongPress={onLongPress}
         onPressIn={onPressIn}
@@ -133,7 +133,7 @@ export const Chip = DaftarChip;
 
 const styles = StyleSheet.create({
   chip: {
-    minHeight: 44,
+    minHeight: 48,
     borderRadius: 9999,
     borderWidth: 1,
     paddingHorizontal: 14,

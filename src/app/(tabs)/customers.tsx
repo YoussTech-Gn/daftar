@@ -9,6 +9,7 @@ import { AmountDisplay, Avatar } from '@/components/ui';
 import { DOCK_SPACE } from '@/components/v4/floating-dock';
 import { Segmented, Txt } from '@/components/v4/primitives';
 import { listCustomers } from '@/db/repository';
+import { compareByDebt } from '@/domain/reading';
 import type { CustomerWithBalance } from '@/domain/types';
 import { haptic } from '@/lib/haptics';
 import { useSessionStore } from '@/state/session-store';
@@ -31,7 +32,6 @@ export default function CustomersScreen() {
   const { colors, scheme } = useTheme();
   const openOperation = useSessionStore((s) => s.openOperation);
   const setNewCustomerOpen = useSessionStore((s) => s.setNewCustomerOpen);
-  const hidden = useSessionStore((s) => s.amountsHidden);
 
   const [all, setAll] = useState<CustomerWithBalance[] | null>(null);
   const [search, setSearch] = useState('');
@@ -40,14 +40,16 @@ export default function CustomersScreen() {
   const load = useCallback(async () => setAll(await listCustomers(db)), [db]);
   useLedgerReload(load);
 
-  const advanceTotal = useMemo(() => (all ?? []).reduce((sum, c) => (c.balance < 0 ? sum - c.balance : sum), 0), [all]);
   const visible = useMemo(
     () =>
-      (all ?? []).filter(
-        (c) =>
-          matches(c, search.trim()) &&
-          (filter === 'owes' ? c.balance > 0 : filter === 'settled' ? c.balance === 0 : filter === 'advance' ? c.balance < 0 : true),
-      ),
+      (all ?? [])
+        .filter(
+          (c) =>
+            matches(c, search.trim()) &&
+            (filter === 'owes' ? c.balance > 0 : filter === 'settled' ? c.balance === 0 : filter === 'advance' ? c.balance < 0 : true),
+        )
+        .slice()
+        .sort(compareByDebt),
     [all, search, filter],
   );
 
@@ -70,7 +72,6 @@ export default function CustomersScreen() {
                 </Txt>
                 <Txt className="text-xs text-ink-2" style={{ textAlign: isRTL ? 'right' : 'left' }}>
                   {t('customersCount', { n: count })}
-                  {advanceTotal > 0 ? ` · ${hidden ? '•••••' : money(advanceTotal)} ${t('inAdvance')}` : ''}
                 </Txt>
               </View>
               <Pressable
@@ -127,40 +128,50 @@ export default function CustomersScreen() {
           const last = index === visible.length - 1;
           const owes = c.balance > 0;
           const advance = c.balance < 0;
+          const hint = (c.note ?? '').trim() || c.phone || '';
+          const amountLabel =
+            c.balance === 0
+              ? t('settled')
+              : advance
+                ? `${t('advanceLabel')} ${money(Math.abs(c.balance))}`
+                : money(c.balance);
           return (
             <Pressable
               accessibilityRole="button"
-              accessibilityHint={t('opOpenFile')}
+              accessibilityLabel={`${c.name}. ${amountLabel}`}
               onPress={() => {
+                haptic.selection();
+                router.push({ pathname: '/customer/[id]', params: { id: String(c.id) } });
+              }}
+              onLongPress={() => {
                 haptic.selection();
                 openOperation({ kind: owes ? 'payment' : 'credit', customerId: c.id });
               }}
-              onLongPress={() => router.push({ pathname: '/customer/[id]', params: { id: String(c.id) } })}
               className={`min-h-[68px] items-center gap-3 border-x border-line bg-surface px-4 py-3 active:bg-surface-muted ${first ? 'rounded-t-card border-t' : ''} ${last ? 'rounded-b-card border-b' : 'border-b'} ${dir}`}>
-              <Avatar name={c.name} size={42} />
+              <Avatar name={c.name} id={c.id} size={42} />
               <View className="flex-1 gap-0.5">
                 <Txt weight="600" numberOfLines={1} style={{ textAlign: isRTL ? 'right' : 'left' }}>
                   {c.name}
                 </Txt>
-                <Txt numberOfLines={1} className="text-xs text-ink-3" style={{ textAlign: isRTL ? 'right' : 'left' }}>
-                  {[c.note, c.phone].filter(Boolean).join(' · ') || ' '}
-                </Txt>
+                {hint ? (
+                  <Txt numberOfLines={1} className="text-xs text-ink-3" style={{ textAlign: isRTL ? 'right' : 'left' }}>
+                    {hint}
+                  </Txt>
+                ) : null}
               </View>
               <View className={`gap-0.5 ${isRTL ? 'items-start' : 'items-end'}`}>
                 {c.balance === 0 ? (
-                  <Txt weight="600" className="text-xs text-ink-3">
+                  <Txt weight="600" className="text-sm text-ink-3">
                     {t('settled')}
                   </Txt>
                 ) : (
                   <>
                     <AmountDisplay
                       amount={Math.abs(c.balance)}
-                      size="label"
+                      size="heading"
                       color={advance ? colors.paymentDeep : colors.creditDeep}
                     />
-                    <Txt className={`text-[11px] ${advance ? 'text-payment' : 'text-credit'}`}>
-                      {advance ? t('advanceLabel') : t('opOwes')}
-                    </Txt>
+                    {advance ? <Txt className="text-xs text-payment">{t('advanceLabel')}</Txt> : null}
                   </>
                 )}
               </View>

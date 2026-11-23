@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   interpolateColor,
@@ -70,31 +70,6 @@ export function EntryRow({
     opacityTo: 0.94,
   });
 
-  // Animated strikethrough transition when entry becomes cancelled
-  const wasCancelledRef = useRef(cancelled);
-  const strikeProgress = useSharedValue(cancelled ? 1 : 0);
-  const rowOpacity = useSharedValue(cancelled ? 0.8 : 1);
-
-  useEffect(() => {
-    const changed = wasCancelledRef.current !== cancelled;
-    wasCancelledRef.current = cancelled;
-
-    if (reducedMotion || !changed) {
-      strikeProgress.value = cancelled ? 1 : 0;
-      rowOpacity.value = cancelled ? 0.8 : 1;
-      return;
-    }
-
-    strikeProgress.value = withTiming(cancelled ? 1 : 0, {
-      duration: DURATION.cancelStrike,
-      easing: EASING.quadOut,
-    });
-    rowOpacity.value = withTiming(cancelled ? 0.8 : 1, {
-      duration: DURATION.cancelStrike,
-      easing: EASING.quadOut,
-    });
-  }, [cancelled, reducedMotion, rowOpacity, strikeProgress]);
-
   // Directional entry highlight animation (Money Out / Money In / Forgive Grace)
   const translateY = useSharedValue(0);
   const washProgress = useSharedValue(0);
@@ -136,16 +111,11 @@ export function EntryRow({
           ? colors.forgivenSoft
           : colors.surface;
 
-  const baseBg = cancelled ? colors.cancelledSoft : colors.surface;
+  const baseBg = colors.surface;
 
   const containerAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
-    opacity: rowOpacity.value,
     backgroundColor: interpolateColor(washProgress.value, [0, 1], [baseBg, washTarget]),
-  }));
-
-  const strikeStyle = useAnimatedStyle(() => ({
-    width: `${strikeProgress.value * 100}%`,
   }));
 
   let Icon: LucideIcon = ArrowUpRight;
@@ -216,24 +186,14 @@ export function EntryRow({
             </View>
 
             <View style={styles.contentCol}>
-              <View style={[styles.titleWrap, { alignSelf: isRTL ? 'flex-end' : 'flex-start' }]}>
-                <DaftarText
-                  role="body"
-                  weight="600"
-                  tone={cancelled ? 'cancelled' : 'default'}
-                  numberOfLines={2}>
-                  {title}
-                </DaftarText>
-                <Animated.View
-                  pointerEvents="none"
-                  style={[
-                    styles.strikeLine,
-                    { backgroundColor: colors.cancelled },
-                    isRTL ? { right: 0 } : { left: 0 },
-                    strikeStyle,
-                  ]}
-                />
-              </View>
+              <DaftarText
+                role="body"
+                weight="600"
+                tone={cancelled ? 'cancelled' : 'default'}
+                numberOfLines={cancelled ? 1 : 2}
+                style={cancelled ? styles.struck : undefined}>
+                {title}
+              </DaftarText>
 
               {effectiveBadge ? (
                 <View
@@ -292,17 +252,13 @@ export function EntryRow({
             </View>
 
             <View style={[styles.amountCol, { alignItems: isRTL ? 'flex-start' : 'flex-end' }]}>
-              <View style={styles.amountWrap}>
-                <AmountDisplay amount={amount} sign={sign} size="label" color={amountColor} />
-                <Animated.View
-                  pointerEvents="none"
-                  style={[
-                    styles.strikeLine,
-                    { backgroundColor: colors.cancelled, left: 0 },
-                    strikeStyle,
-                  ]}
-                />
-              </View>
+              <AmountDisplay
+                amount={amount}
+                sign={sign}
+                size="label"
+                color={amountColor}
+                strikeThrough={cancelled}
+              />
             </View>
           </Row>
         </Animated.View>
@@ -330,9 +286,8 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 4,
   },
-  titleWrap: {
-    position: 'relative',
-    justifyContent: 'center',
+  struck: {
+    textDecorationLine: 'line-through',
   },
   badge: {
     paddingHorizontal: 8,
@@ -349,15 +304,5 @@ const styles = StyleSheet.create({
   amountCol: {
     flexShrink: 0,
     paddingTop: 2,
-  },
-  amountWrap: {
-    position: 'relative',
-    justifyContent: 'center',
-  },
-  strikeLine: {
-    position: 'absolute',
-    top: '50%',
-    height: 1.5,
-    borderRadius: 1,
   },
 });

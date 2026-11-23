@@ -15,8 +15,8 @@
       "surfaceSunken": "#EBEEF2",
       "text": "#111827",
       "textSecondary": "#4B5563",
-      "textMuted": "#828C9A",
-      "border": "#E3E6EB",
+      "textMuted": "#5A6270",
+      "border": "#D3D8E0",
       "borderStrong": "#CDD2DA",
       "primary": "#1E3A5F",
       "primarySoft": "#E4EAF2",
@@ -32,7 +32,7 @@
       "forgiven": "#6D4C82",
       "forgivenSoft": "#EFE9F3",
       "onForgiven": "#FAFBFC",
-      "cancelled": "#6B7480",
+      "cancelled": "#555E6A",
       "cancelledSoft": "#EBEEF2",
       "danger": "#B91C1C",
       "dangerSoft": "#F9E6E6",
@@ -49,8 +49,8 @@
       "surfaceSunken": "#1E2430",
       "text": "#ECEFF4",
       "textSecondary": "#98A2B3",
-      "textMuted": "#667085",
-      "border": "#232937",
+      "textMuted": "#8A94A3",
+      "border": "#31394A",
       "borderStrong": "#343C4D",
       "primary": "#7BA6E8",
       "primarySoft": "#1A2536",
@@ -59,14 +59,14 @@
       "creditDeep": "#EDA06A",
       "creditSoft": "#2A1D14",
       "onCredit": "#1A0E05",
-      "payment": "#34C79B",
-      "paymentDeep": "#5AD6B0",
+      "payment": "#6FAE96",
+      "paymentDeep": "#7FB8A2",
       "paymentSoft": "#11261F",
       "onPayment": "#04140E",
       "forgiven": "#B88CE0",
       "forgivenSoft": "#231C2C",
       "onForgiven": "#170F1F",
-      "cancelled": "#7A8496",
+      "cancelled": "#8E98A8",
       "cancelledSoft": "#1E2430",
       "danger": "#F0625D",
       "dangerSoft": "#2E1716",
@@ -101,9 +101,9 @@
     },
     "scale": {
       "displayAmount": {
-        "fontSize": 38,
-        "fontSizeCompact": 30,
-        "lineHeight": 44,
+        "fontSize": 42,
+        "fontSizeCompact": 32,
+        "lineHeight": 50,
         "fontWeight": "700",
         "letterSpacing": -0.6
       },
@@ -176,7 +176,7 @@
         "shadowRadius": 16,
         "elevation": 2,
         "borderWidth": 1,
-        "borderColor": "#E3E6EB"
+        "borderColor": "#D3D8E0"
       },
       "button": {
         "shadowColor": "#1E3A5F",
@@ -220,7 +220,7 @@
         "shadowRadius": 18,
         "elevation": 2,
         "borderWidth": 1,
-        "borderColor": "#232937"
+        "borderColor": "#31394A"
       },
       "button": {
         "shadowColor": "#000000",

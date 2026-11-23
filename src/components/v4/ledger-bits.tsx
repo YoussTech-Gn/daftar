@@ -37,7 +37,7 @@ export function PrivacyEye() {
         haptic.selection();
         toggle();
       }}
-      className={`h-11 w-11 items-center justify-center rounded-full border border-line ${hidden ? 'bg-accent-soft' : 'bg-surface-muted'}`}>
+      className={`h-12 w-12 items-center justify-center rounded-full border border-line ${hidden ? 'bg-accent-soft' : 'bg-surface-muted'}`}>
       <Icon size={ICON_SCALE.sm.size} color={v4(scheme, hidden ? 'accent' : 'text-secondary')} />
     </Pressable>
   );

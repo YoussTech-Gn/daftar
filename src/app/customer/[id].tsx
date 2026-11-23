@@ -5,7 +5,6 @@ import { FlatList, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
-  AlertCircle,
   ArchiveRestore,
   ArrowDownLeft,
   ArrowUpRight,
@@ -16,10 +15,11 @@ import {
   Pencil,
   Phone,
   Trash2,
+  type LucideIcon,
 } from '@/components/icons';
+import { PrivacyEye } from '@/components/v4/ledger-bits';
 import {
   AmountDisplay,
-  Avatar,
   ConfirmationDialog,
   CustomerDetailSkeleton,
   DaftarButton,
@@ -42,13 +42,36 @@ import {
   TRASH_RETENTION_MS,
 } from '@/db/repository';
 import { itemsToNote } from '@/domain/calc';
+import { latestPayment } from '@/domain/reading';
 import { buildWhatsAppLink, stripDirectionMarks } from '@/domain/reminder';
+import { shortStamp } from '@/domain/time';
 import type { CustomerWithBalance, Entry } from '@/domain/types';
 import { haptic } from '@/lib/haptics';
 import { buildReceiptPayload, type ReceiptPayload } from '@/lib/receipt';
 import { useSessionStore } from '@/state/session-store';
 import { useApp } from '@/state/use-app';
 import { useTheme } from '@/theme';
+
+function SecondaryAction({
+  icon: Icon,
+  label,
+  onPress,
+  color,
+}: {
+  icon: LucideIcon;
+  label: string;
+  onPress: () => void;
+  color: string;
+}) {
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={styles.secondaryAction}>
+      <Icon size={ICON_SCALE.sm.size} color={color} strokeWidth={ICON_SCALE.sm.strokeWidth} />
+      <DaftarText role="caption" weight="600" numberOfLines={2} align="center" style={{ color }}>
+        {label}
+      </DaftarText>
+    </Pressable>
+  );
+}
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -127,11 +150,8 @@ export default function CustomerScreen() {
       ? Math.max(0, Math.ceil(((customer.deletedAt ?? 0) + TRASH_RETENTION_MS - now) / DAY_MS))
       : 0;
 
-  const lastCredit = entries.find((e) => e.kind === 'credit' && !e.cancelledAt);
   // Forgiveness is not money received, so it never counts as the last payment.
-  const lastPayment = entries.find((e) => e.kind === 'payment' && !e.cancelledAt);
-  const shortDate = (ts: number) =>
-    new Date(ts).toLocaleDateString(settings.language, { day: 'numeric', month: 'short' });
+  const lastPaid = latestPayment(entries);
 
   const balanceColor = owes ? colors.creditDeep : colors.paymentDeep;
   const statusBg = owes ? colors.creditSoft : colors.paymentSoft;
@@ -163,7 +183,7 @@ export default function CustomerScreen() {
 
   function remind() {
     if (!customer?.phone) {
-      showToast(t('noPhone'));
+      router.push({ pathname: '/customer/form', params: { id: String(customerId) } });
       return;
     }
     const rawMessage = t('reminderTemplate', {
@@ -276,15 +296,15 @@ export default function CustomerScreen() {
               <View
                 style={[
                   styles.trashBanner,
-                  { backgroundColor: colors.dangerSoft, borderColor: colors.danger },
+                  { backgroundColor: colors.primarySoft, borderColor: colors.primary },
                 ]}>
                 <Row gap={10}>
-                  <AlertCircle size={ICON_SCALE.md.size} color={colors.danger} strokeWidth={ICON_SCALE.md.strokeWidth} />
+                  <ArchiveRestore size={ICON_SCALE.md.size} color={colors.primary} strokeWidth={ICON_SCALE.md.strokeWidth} />
                   <View style={{ flex: 1, gap: 2 }}>
-                    <DaftarText role="label" tone="danger" weight="700">
+                    <DaftarText role="label" tone="primary" weight="700">
                       {t('inTrashBanner')}
                     </DaftarText>
-                    <DaftarText role="caption" tone="danger">
+                    <DaftarText role="caption" tone="primary">
                       {t('daysLeft', { n: daysLeft })}
                     </DaftarText>
                   </View>
@@ -317,24 +337,9 @@ export default function CustomerScreen() {
                 ]}
               />
 
-              <Row gap={12}>
-                <Avatar name={customer.name} size={46} />
-                <View style={{ flex: 1, gap: 2 }}>
-                  <DaftarText role="title" weight="700" numberOfLines={1}>
-                    {customer.name}
-                  </DaftarText>
-                  {customer.note || customer.phone ? (
-                    <DaftarText role="caption" tone="secondary" numberOfLines={2}>
-                      {[customer.note, customer.phone].filter(Boolean).join(' · ')}
-                    </DaftarText>
-                  ) : null}
-                </View>
-                <View style={[styles.statusPill, { backgroundColor: statusBg }]}>
-                  <DaftarText role="caption" weight="700" style={{ color: balanceColor }}>
-                    {owes ? t('owes') : advance ? t('advance') : t('settled')}
-                  </DaftarText>
-                </View>
-              </Row>
+              <View style={[styles.heroTop, { justifyContent: isRTL ? 'flex-start' : 'flex-end' }]}>
+                <PrivacyEye />
+              </View>
 
               <View style={styles.balanceCenter}>
                 <DaftarText role="caption" tone="muted" align="center">
@@ -347,77 +352,59 @@ export default function CustomerScreen() {
                   color={balanceColor}
                   align="center"
                 />
-              </View>
-
-              {lastCredit || lastPayment ? (
+                <View style={[styles.statusPill, { backgroundColor: statusBg }]}>
+                  <DaftarText role="caption" weight="700" style={{ color: balanceColor }}>
+                    {owes ? t('owes') : advance ? t('advance') : t('settled')}
+                  </DaftarText>
+                </View>
                 <DaftarText role="caption" tone="muted" align="center">
-                  {[
-                    lastCredit ? t('lastCredit', { date: shortDate(lastCredit.createdAt) }) : null,
-                    lastPayment ? t('lastPayment', { date: shortDate(lastPayment.createdAt) }) : t('neverPaid'),
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')}
+                  {lastPaid
+                    ? t('lastPayment', { date: shortStamp(lastPaid.createdAt, settings.language) })
+                    : t('neverPaid')}
                 </DaftarText>
-              ) : null}
+                {customer.phone || customer.note ? (
+                  <DaftarText role="caption" tone="secondary" numberOfLines={1} align="center">
+                    {customer.phone || customer.note}
+                  </DaftarText>
+                ) : null}
+              </View>
             </View>
 
-            {/* Primary & Secondary CTAs */}
             {!inTrash ? (
-              <View style={{ gap: 10 }}>
-                <Row gap={10}>
-                  <DaftarButton
-                    label={t('gaveCredit')}
-                    icon={ArrowUpRight}
-                    variant="credit"
-                    onPress={() => openEntry('credit')}
-                    style={{ flex: 1 }}
-                  />
-                  <DaftarButton
-                    label={t('receivedPayment')}
-                    icon={ArrowDownLeft}
-                    variant="payment"
-                    onPress={() => openEntry('payment')}
-                    style={{ flex: 1 }}
-                  />
-                </Row>
-
+              <View
+                style={[
+                  styles.secondaryGroup,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                    flexDirection: isRTL ? 'row-reverse' : 'row',
+                  },
+                ]}>
+                <SecondaryAction icon={MessageCircle} label={t('remind')} onPress={remind} color={colors.whatsapp} />
                 {owes ? (
-                  <Row gap={10}>
-                    <DaftarButton
-                      label={t('settleAll')}
-                      icon={CheckCheck}
-                      variant="secondary"
-                      onPress={() => openEntry('payment', true)}
-                      style={{ flex: 1 }}
-                    />
-                    <DaftarButton
-                      label={t('forgive')}
-                      icon={HeartHandshake}
-                      variant="forgiven"
-                      onPress={() => setForgiveDialogOpen(true)}
-                      style={{ flex: 1 }}
-                    />
-                  </Row>
-                ) : null}
-
-                <Row gap={10}>
-                  <DaftarButton
-                    label={t('remind')}
-                    icon={MessageCircle}
-                    variant="whatsapp"
-                    onPress={remind}
-                    style={{ flex: 1 }}
+                  <SecondaryAction
+                    icon={HeartHandshake}
+                    label={t('forgive')}
+                    onPress={() => setForgiveDialogOpen(true)}
+                    color={colors.forgiven}
                   />
-                  {customer.phone ? (
-                    <DaftarButton
-                      label={t('call')}
-                      icon={Phone}
-                      variant="secondary"
-                      onPress={() => Linking.openURL(`tel:${customer.phone}`).catch(() => undefined)}
-                      style={{ flex: 1 }}
-                    />
-                  ) : null}
-                </Row>
+                ) : null}
+                {customer.phone ? (
+                  <SecondaryAction
+                    icon={Phone}
+                    label={t('call')}
+                    onPress={() => Linking.openURL(`tel:${customer.phone}`).catch(() => undefined)}
+                    color={colors.primary}
+                  />
+                ) : null}
+                {owes ? (
+                  <SecondaryAction
+                    icon={CheckCheck}
+                    label={t('settleAll')}
+                    onPress={() => openEntry('payment', true)}
+                    color={colors.textSecondary}
+                  />
+                ) : null}
               </View>
             ) : null}
 
@@ -452,7 +439,7 @@ export default function CustomerScreen() {
               items={item.items}
               note={extraNote(item)}
               badgeLabel={badge}
-              timestampLabel={new Date(item.createdAt).toLocaleString(settings.language)}
+              timestampLabel={shortStamp(item.createdAt, settings.language)}
               cancelled={item.cancelledAt != null}
               highlightMode={highlightMode}
               onLongPress={
@@ -483,7 +470,36 @@ export default function CustomerScreen() {
         }
       />
 
-      {undo ? <UndoBar5s message={undo.message} onUndo={() => undo.run()} onHide={hideUndo} /> : null}
+      {!inTrash ? (
+        <View
+          style={[
+            styles.actionBar,
+            {
+              backgroundColor: colors.bg,
+              borderTopColor: colors.border,
+              flexDirection: isRTL ? 'row-reverse' : 'row',
+            },
+          ]}>
+          <DaftarButton
+            label={t('gaveCredit')}
+            icon={ArrowUpRight}
+            variant="credit"
+            onPress={() => openEntry('credit')}
+            style={styles.actionButton}
+          />
+          <DaftarButton
+            label={t('receivedPayment')}
+            icon={ArrowDownLeft}
+            variant="payment"
+            onPress={() => openEntry('payment')}
+            style={styles.actionButton}
+          />
+        </View>
+      ) : null}
+
+      {undo ? (
+        <UndoBar5s message={undo.message} onUndo={() => undo.run()} onHide={hideUndo} bottomOffset={inTrash ? 20 : 88} />
+      ) : null}
 
       <ConfirmationDialog
         visible={forgiveDialogOpen}
@@ -540,7 +556,7 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 16,
     gap: 10,
-    paddingBottom: 96,
+    paddingBottom: 24,
   },
   headerBlock: {
     gap: 14,
@@ -573,7 +589,38 @@ const styles = StyleSheet.create({
   },
   balanceCenter: {
     alignItems: 'center',
-    gap: 2,
-    paddingVertical: 2,
+    gap: 6,
+    paddingTop: 4,
+  },
+  heroTop: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  secondaryGroup: {
+    flexDirection: 'row',
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
+  secondaryAction: {
+    flex: 1,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 8,
+  },
+  actionBar: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  actionButton: {
+    flex: 1,
   },
 });
